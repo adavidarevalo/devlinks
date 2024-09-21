@@ -1,5 +1,4 @@
-import { useForm, useFieldArray } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
+import { Formik, FieldArray, Form } from "formik";
 import { Button, Box, useTheme } from "@mui/material";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,38 +17,17 @@ const LinkForm = () => {
   const dispatch = useDispatch();
   const theme = useTheme();
   const linksState = useSelector((state: RootState) => state.links);
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: yupResolver(linkFormSchema as any),
-    defaultValues: {
-      links: linksState.links
-    },
-  });
-
-  const { fields, append, remove, move } = useFieldArray({
-    control,
-    name: "links",
-  });
-
-  console.log("errors ", errors)
-
-  // Handle form submission
-  const onSubmit = (data: FormValues) => {
-    console.log("🚀 ~ onSubmit ~ data:", data)
-    dispatch(setLinks(data));
-  };
-
-  // Handle drag and drop
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
-    move(result.source.index, result.destination.index);
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} style={{ padding: "10px 20px" }}>
+    <Formik
+      initialValues={{ links: linksState.links }}
+      validationSchema={linkFormSchema}
+      onSubmit={(values) => {
+        console.log("🚀 ~ onSubmit ~ values:", values);
+        dispatch(setLinks(values));
+      }}
+    >
+      {({ values, errors, handleChange, handleSubmit }) => (
+        <Form onSubmit={handleSubmit} style={{ padding: "10px 20px" }}>
       <Box
         sx={{
           display: "flex",
@@ -61,24 +39,27 @@ const LinkForm = () => {
         {/* Fixed Header */}
         <Box sx={{ flexShrink: 0 }}>
           <Header />
-          <Button
-            variant="outlined"
-            onClick={() => append({ platform: "", link: "" })}
-            style={{
-              marginBlock: "13px 20px",
-              fontSize: "13px",
-              fontWeight: "600",
-              color: theme.palette.primary.main,
-              borderColor: theme.palette.primary.main,
-              textTransform: "none",
-              cursor: "pointer",
-              borderRadius: "8px",
-              width: "100%",
-              padding: "8px",
-            }}
-          >
-            + Add new link
-          </Button>
+          <FieldArray name="links">
+            {({ push, remove }) => (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={() => push({ platform: "", link: "" })}
+                  style={{
+                    marginBlock: "13px 20px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: theme.palette.primary.main,
+                    borderColor: theme.palette.primary.main,
+                    textTransform: "none",
+                    cursor: "pointer",
+                    borderRadius: "8px",
+                    width: "100%",
+                    padding: "8px",
+                  }}
+                >
+                  + Add new link
+                </Button>
         </Box>
 
         {/* Scrollable Cards Section */}
@@ -88,25 +69,26 @@ const LinkForm = () => {
             marginBottom: "20px",
           }}
         >
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="links">
-              {(provided) => (
-                <Box {...provided.droppableProps} ref={provided.innerRef}>
-                  {fields.map((field, index) => (
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    marginBottom: "20px",
+                  }}
+                >
+                  {values.links.map((link, index) => (
                     <Card
-                    control={control}
-                      key={field.id}
-                      field={field}
+                      key={index}
+                      field={link}
                       index={index}
                       remove={remove}
                       errors={errors}
+                      handleChange={handleChange}
                     />
                   ))}
-                  {provided.placeholder}
                 </Box>
-              )}
-            </Droppable>
-          </DragDropContext>
+              </>
+            )}
+          </FieldArray>
         </Box>
 
         {/* Fixed Footer */}
@@ -114,7 +96,9 @@ const LinkForm = () => {
           <Footer />
         </Box>
       </Box>
-    </form>
+        </Form>
+      )}
+    </Formik>
   );
 };
 
