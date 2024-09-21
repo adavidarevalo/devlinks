@@ -68,7 +68,7 @@ export const LinksProvider = ({ children }: { children: ReactNode }) => {
     defaultValues: initialState,
   });
 
-  const { fields, append, remove, move } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray<LinksState>({
     control: control!,
     name: "links",
   });
