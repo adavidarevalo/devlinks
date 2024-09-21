@@ -1,12 +1,13 @@
 import React, { ReactNode } from 'react'
 import { Controller } from 'react-hook-form'
 import { TextField, InputAdornment } from '@mui/material'
+import _ from 'lodash';
 
 interface FormInputProps {
   control: any;
   errors: any;
   name: string;
-  Icon: ReactNode;
+  Icon?: ReactNode;
   label: string;
   type?: string
   autoComplete?: string;
@@ -39,13 +40,17 @@ const FormInput: React.FC<FormInputProps> = ({
           autoComplete={autoComplete ?? name}
           autoFocus
           placeholder={placeholder ?? `e.g. ${label}`}
-          error={!!errors[name]}
-          helperText={errors[name]?.message}
+          error={!!_.get(errors, `[${name}]`)}
+          helperText={_.get(errors, `[${name}].message`)}
           InputProps={{
             startAdornment: (
+              <>
+              {Icon && (
               <InputAdornment position="start">
                 {Icon}
               </InputAdornment>
+              )}
+              </>
             ),
           }}
           
@@ -53,7 +58,9 @@ const FormInput: React.FC<FormInputProps> = ({
             '& .MuiOutlinedInput-root': {
               '&.Mui-focused': {
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#633CFF',
+                  border: '1px solid #633CFF',
+                  boxShadow: '0 0 32px 0 rgba(99,60,255,.25)', // Added focus box shadow
+
                 },
               },
             },

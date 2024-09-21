@@ -1,23 +1,25 @@
-import React from "react";
 import Phone from "../../../assets/Phone";
 import { Box } from "@mui/material";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import test from "./../../../assets/test.jpg"
+import test from "./../../../assets/test.jpg";
 import { platforms } from "../../../utils/const/plataforms";
 import { useLinks } from "../../context/link";
+import { useWatch } from "react-hook-form";
+import _ from "lodash";
 
 export default function PhonePreview() {
-  const { fields, move } = useLinks();
-  console.log("🚀 ~ PhonePreview ~ fields:", fields);
+  const { control, fields, move } = useLinks();
 
-  // Handle drag and drop
+  const links = useWatch({ control: control!, name: "links" });
+  const firstName = useWatch({ control: control!, name: "firstName" });
+  const lastName = useWatch({ control: control!, name: "lastName" });
+  const email = useWatch({ control: control!, name: "email" });
+
   const onDragEnd = (result: any) => {
     if (!result.destination) return;
     move(result.source.index, result.destination.index);
   };
 
-
-  
   return (
     <Box
       style={{
@@ -31,42 +33,48 @@ export default function PhonePreview() {
       justifyContent={"center"}
       alignItems={"center"}
     >
-      <Box  position={"relative"}>
+      <Box position={"relative"}>
         <Phone />
-        <img src={test} style={{
-          width: "100px",
-          height: "100px",
-          objectFit: "cover",
-          borderRadius: "100%",
-          position: "absolute",
-          top: "59px",
-          left: "102px"
-        }}/> 
-        <Box 
-        position={"absolute"} 
-        top={"179px"} 
-        fontSize={"1.125rem"} 
-        fontWeight={"600"}
-        textAlign={"center"}
-        width={"80%"}
-        left={"33px"}
-        style={{background: "white"}}
-        >
-          Ross Jackson
-        </Box>
-
-        <Box 
-        position={"absolute"} 
-        top={"206px"} 
-        fontSize={".875rem"} 
-        fontWeight={"400"}
-        textAlign={"center"}
-        width={"80%"}
-        left={"33px"}
-        style={{background: "white"}}
-        >
-          test@test.com
-        </Box>
+        <img
+          src={test}
+          style={{
+            width: "100px",
+            height: "100px",
+            objectFit: "cover",
+            borderRadius: "100%",
+            position: "absolute",
+            top: "59px",
+            left: "102px",
+          }}
+        />
+        {firstName || lastName ? (
+          <Box
+            position={"absolute"}
+            top={"179px"}
+            fontSize={"1.125rem"}
+            fontWeight={"600"}
+            textAlign={"center"}
+            width={"80%"}
+            left={"33px"}
+            style={{ background: "white" }}
+          >
+            {firstName} {lastName}
+          </Box>
+        ) : null}
+        {email ? (
+          <Box
+            position={"absolute"}
+            top={"206px"}
+            fontSize={".875rem"}
+            fontWeight={"400"}
+            textAlign={"center"}
+            width={"80%"}
+            left={"33px"}
+            style={{ background: "white" }}
+          >
+            {email}
+          </Box>
+        ) : null}
         {fields.length > 0 && (
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="phoneLinks">
@@ -80,10 +88,16 @@ export default function PhonePreview() {
                 >
                   {fields.map((link, index) => {
                     const platform = platforms.find(
-                      (platform) => platform.name === link.platform
+                      (platform) =>
+                        platform.name ===
+                        _.get(links, `[${index}].platform`, link.platform)
                     );
                     return (
-                      <Draggable key={link.id} draggableId={link.id} index={index}>
+                      <Draggable
+                        key={link.id}
+                        draggableId={link.id}
+                        index={index}
+                      >
                         {(provided) => (
                           <Box
                             ref={provided.innerRef}
@@ -98,16 +112,12 @@ export default function PhonePreview() {
                               alignItems: "center",
                               color: "white",
                               borderRadius: "7px",
-                              marginBottom: "22px",
+                              marginBottom: "21px",
                               ...provided.draggableProps.style,
                             }}
                           >
-                            {platform && (
-                              <Box marginRight={"6px"}>
-                                <platform.icon color={false} />
-                              </Box>
-                            )}
-                            {link.platform}
+                            {platform && <platform.icon color={"white"} />}
+                            <Box marginLeft={"5px"}>{platform?.name}</Box>
                           </Box>
                         )}
                       </Draggable>
@@ -120,7 +130,6 @@ export default function PhonePreview() {
           </DragDropContext>
         )}
       </Box>
-
     </Box>
   );
 }

@@ -30,3 +30,4 @@ dist-ssr
 
 
 cdk.out
+cdk.context.json

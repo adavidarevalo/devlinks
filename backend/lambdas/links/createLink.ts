@@ -2,31 +2,36 @@ import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 import * as AWSXRay from 'aws-xray-sdk';
 import * as _ from 'lodash';
-import { nanoid } from 'nanoid'
+import { nanoid } from 'nanoid';
+import { extname } from 'path';
+import { parse } from 'lambda-multipart-parser'; // Import lambda-multipart-parser
 
 AWSXRay.captureAWS(require('aws-sdk'));
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
+const s3 = new AWS.S3();
 
 export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
   try {
-    
     const userId = _.get(event, "requestContext.authorizer.claims.sub");
+
+    // Parse the multipart form data using lambda-multipart-parser
+    const formData = await parse(event);
+
+    let avatarFile: any = null;
+
+    // Collect form data
+    const { firstName = '', lastName = '', files } = formData;
+
+    // Look for the avatar file in the files array
+    const avatar = files.find(file => file.fieldname === 'avatar');
     
-    const { avatar= "", firstName = "", lastName = "", links = [] } = JSON.parse(event.body || '{}');
-
-
-    const item = {
-      userId, // Use userId from Cognito as the partition key
-      avatar: avatar,
-      firstName,
-      lastName,
-      links: links.map((link: { platform: string; url: string }) => ({
-        platform: link.platform,
-        url: link.url,
-      })),
-      id: nanoid()
-    };
+    // Validate the avatar file type
+    if (avatar && avatar.contentType?.startsWith('image/')) {
+      avatarFile = avatar;
+    } else if (avatar) {
+      throw new Error('Invalid file type, only images are allowed');
+    }
 
     // Check if the item already exists in DynamoDB
     const existingItem = await dynamodb
@@ -35,6 +40,58 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
         Key: { userId },
       })
       .promise();
+
+    let avatarUrl = existingItem.Item ? existingItem.Item.avatar : '';
+    const bucketName = process.env.S3_BUCKET_NAME;
+    if (!bucketName) {
+      throw new Error('S3 bucket name is not set in environment variables.');
+    }
+
+    if (avatarFile) {
+      const s3Key = `${userId}/${nanoid()}${extname(avatarFile.filename)}`;
+
+      // Delete existing avatar if present
+      if (existingItem.Item && existingItem.Item.avatar) {
+        const oldAvatarKey = existingItem.Item.avatar.split('.com/')[1];
+        await s3
+          .deleteObject({
+            Bucket: bucketName, // Use the bucket name here
+            Key: oldAvatarKey,
+          })
+          .promise();
+      }
+
+      // // Upload new avatar - Ensure the content is uploaded as a Buffer
+      // const uploadResult = await s3
+      //   .upload({
+      //     Bucket: bucketName,
+      //     Key: s3Key,
+      //     Body: Buffer.from(avatarFile.content),  // Convert content to Buffer
+      //     ContentType: avatarFile.contentType,    // Set content type (e.g., image/jpeg)
+      //   })
+      //   .promise();
+      // const base64Data = avatarFile.content.replace(/^data:image\/\w+;base64,/, "");
+      // const buffer = Buffer.from(base64Data, 'base64');
+console.log("X1 ", avatarFile.content)
+
+ const uploadResult = await s3.upload({
+        Bucket: bucketName,
+        Key: s3Key,
+        Body: avatarFile.content,  // Use the Buffer directly
+        ContentType: avatarFile.contentType,    // Set content type (e.g., image/jpeg)
+      }).promise();
+
+
+      avatarUrl = uploadResult.Location;
+    }
+
+    const item = {
+      userId,
+      avatar: avatarUrl,
+      firstName,
+      lastName,
+      id: existingItem.Item ? existingItem.Item.id : nanoid(),
+    };
 
     if (!existingItem.Item) {
       // Item does not exist, create a new one
@@ -56,15 +113,11 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
           TableName: process.env.DYNAMO_TABLE_NAME!,
           Key: { userId },
           UpdateExpression:
-            'set avatar = :avatar, firstName = :firstName, lastName = :lastName, links = :links',
+            'set avatar = :avatar, firstName = :firstName, lastName = :lastName',
           ExpressionAttributeValues: {
-            ':avatar': avatar || '',
+            ':avatar': avatarUrl || '',
             ':firstName': firstName,
             ':lastName': lastName,
-            ':links': links.map((link: { platform: string; url: string }) => ({
-              platform: link.platform,
-              url: link.url,
-            })),
           },
         })
         .promise();
@@ -75,7 +128,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       };
     }
   } catch (error: any) {
-    console.error(error)
+    console.error(error);
     if (error.code === 'NotAuthorizedException') {
       return {
         statusCode: 401,
@@ -83,8 +136,6 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       };
     }
 
-    // Log and return a 500 error if something else went wrong
-    console.error('Error creating or updating user links:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ message: 'Error creating or updating user links', error: error.message }),

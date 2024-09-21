@@ -18,6 +18,7 @@ interface CardProps {
 
 export default function Card({ field, index }: CardProps) {
   const { control, errors, remove } = useLinks();
+
   return (
     <Draggable key={field.id} draggableId={field.id} index={index}>
       {(provided) => (
@@ -54,13 +55,9 @@ export default function Card({ field, index }: CardProps) {
           <Controller
             name={`links.${index}.platform`}
             control={control!}
-            render={({ field: { onChange, onBlur, value, ref } }) => (
+            render={({ field }) => (
               <Select
                 {...field}
-                value={value}
-                onChange={onChange}
-                onBlur={onBlur}
-                ref={ref}
                 fullWidth
                 displayEmpty
                 IconComponent={IoIosArrowDown}
@@ -79,10 +76,12 @@ export default function Card({ field, index }: CardProps) {
               >
                 {platforms.map((platform) => (
                   <MenuItem key={platform.name} value={platform.name}>
-                    <Box style={{ marginRight: "5px" }}>
+                   <Box display={"flex"}>
+                   <Box style={{ marginRight: "5px" }}>
                       {<platform.icon color={"#737373"}/>}
                     </Box>
                     {platform.name}
+                   </Box>
                   </MenuItem>
                 ))}
               </Select>

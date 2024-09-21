@@ -5,7 +5,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { Box, Typography } from "@mui/material";
 import FormInput from "../form/input";
 import EmailIcon from "../../assets/EmailIcon";
-import LockIcon from "../../assets/LockIcon";
+import LockIcon from "../../assets/platforms/LockIcon";
 import SubmitButton from "../form/submitButton";
 import { Link } from "react-router-dom";
 import AuthenticationService from "./../../services/auth";

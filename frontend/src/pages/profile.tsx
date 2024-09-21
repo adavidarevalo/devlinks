@@ -1,13 +1,18 @@
-import React from 'react'
-import DevlinksLogoLg from '../assets/DevlinksLogoLg'
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material'
-import { IoIosLink } from "react-icons/io";
-import MainLayout from '../components/layout/main';
+import React from "react";
+import { Box } from "@mui/material";
+import CustomizeLinksLayout from "../components/layout/links";
+import LinkForm from "../components/link/form";
+import { LinksProvider } from "../components/context/link";
+import ProfileDetails from "../components/profileDetails";
 
 export default function ProfilePage() {
   return (
-    <Box style={{background: "red", height: "100vh"}}>
-    <MainLayout/>
+    <Box style={{ height: "100vh" }}>
+      <LinksProvider>
+        <CustomizeLinksLayout>
+          <ProfileDetails />
+        </CustomizeLinksLayout>
+      </LinksProvider>
     </Box>
-  )
+  );
 }

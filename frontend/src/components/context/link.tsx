@@ -1,4 +1,7 @@
-import React, { createContext, useReducer, ReactNode, useContext } from 'react';
+import { yupResolver } from '@hookform/resolvers/yup';
+import React, { createContext, ReactNode, useContext } from 'react';
+import { Control, FieldArrayWithId, FieldErrors, useFieldArray, UseFieldArrayAppend, UseFieldArrayMove, UseFieldArrayRemove, useForm, UseFormHandleSubmit } from 'react-hook-form';
+import { linkFormSchema } from '../schemas/link';
 
 interface Link {
   platform: string;
@@ -13,53 +16,51 @@ interface LinksState {
   links: Link[];
 }
 
-type LinksAction =
-  | { type: 'SET_LINKS'; payload: LinksState }
-  | { type: 'ADD_LINK'; payload: Link }
-  | { type: 'REMOVE_LINK'; payload: number }
-  | { type: 'UPDATE_LINK'; payload: { index: number; link: Link } };
-
 const initialState: LinksState = {
-  firstName: undefined,
-  lastName: undefined,
-  email: undefined,
+  firstName: "",
+  lastName: "",
+  email: "",
   avatar: undefined,
   links: [],
 };
 
 const LinksContext = createContext<{
-  state: LinksState;
-  dispatch: React.Dispatch<LinksAction>;
+  control: Control<LinksState, any> | null
+  errors: FieldErrors<LinksState>
+  handleSubmit: UseFormHandleSubmit<LinksState, undefined> | null
+  move: UseFieldArrayMove
+  remove: UseFieldArrayRemove
+  append: UseFieldArrayAppend<LinksState, "links">
+  fields: FieldArrayWithId<LinksState, "links", "id">[]
 }>({
-  state: initialState,
-  dispatch: () => null,
+  control: null,
+  errors: {},
+  handleSubmit: null,
+  move: () => {},
+  remove: () => {},
+  append: () => {},
+  fields: [],
 });
 
-const linksReducer = (state: LinksState, action: LinksAction): LinksState => {
-  switch (action.type) {
-    case 'SET_LINKS':
-      return { ...state, ...action.payload };
-    case 'ADD_LINK':
-      return { ...state, links: [...state.links, action.payload] };
-    case 'REMOVE_LINK':
-      return { ...state, links: state.links.filter((_, index) => index !== action.payload) };
-    case 'UPDATE_LINK':
-      return {
-        ...state,
-        links: state.links.map((link, index) =>
-          index === action.payload.index ? action.payload.link : link
-        ),
-      };
-    default:
-      return state;
-  }
-};
 
 export const LinksProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(linksReducer, initialState);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LinksState>({
+    resolver: yupResolver(linkFormSchema as any),
+    defaultValues: initialState,
+  });
+
+  const { fields, append, remove, move } = useFieldArray({
+    control: control!,
+    name: "links",
+  });  
 
   return (
-    <LinksContext.Provider value={{ state, dispatch }}>
+    <LinksContext.Provider value={{ control, errors, handleSubmit, fields, append, remove, move }}>
       {children}
     </LinksContext.Provider>
   );

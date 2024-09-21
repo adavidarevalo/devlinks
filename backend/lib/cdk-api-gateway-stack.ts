@@ -9,6 +9,10 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as certificates from "aws-cdk-lib/aws-certificatemanager";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import * as s3n from "aws-cdk-lib/aws-s3-notifications";
+import { nanoid } from 'nanoid';
 
 export class CdkApiGatewayStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -243,6 +247,16 @@ export class CdkApiGatewayStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test, use RETAIN for production
     });
 
+      // Create an S3 bucket with public read access
+      const s3Bucket = new s3.Bucket(this, "PublicS3Bucket", {
+        bucketName: "devlinks098109238091",
+        publicReadAccess: true, // Enable public read access
+        removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test environments
+        autoDeleteObjects: true, // Allow objects to be automatically deleted
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS, // Only block ACLs, not object-level public access
+      });
+    
+
     const createLinkLambda = new lambdaNodejs.NodejsFunction(
       this,
       "CreateLinkFunction",
@@ -256,6 +270,7 @@ export class CdkApiGatewayStack extends cdk.Stack {
         environment: {
           USER_POOL_ID: userPool.userPoolId,
           DYNAMO_TABLE_NAME: devlinksTable.tableName,
+          S3_BUCKET_NAME: s3Bucket.bucketName, // Pass the bucket name to Lambda
         },
         bundling: {
           minify: true,
@@ -264,12 +279,29 @@ export class CdkApiGatewayStack extends cdk.Stack {
       }
     );
 
+    devlinksTable.grantReadWriteData(createLinkLambda)
+
+
+     // Grant permissions for the Lambda function to create and delete objects in the S3 bucket
+     s3Bucket.grantPut(createLinkLambda);  // Allow Lambda to put objects
+     s3Bucket.grantDelete(createLinkLambda);  // Allow Lambda to delete objects
+ 
+     // Define the S3 bucket policy to allow public read access to objects
+     s3Bucket.addToResourcePolicy(
+       new iam.PolicyStatement({
+         actions: ["s3:GetObject"],
+         resources: [`${s3Bucket.bucketArn}/*`], // Grant public read access to all objects in the bucket
+         principals: [new iam.AnyPrincipal()],  // Anyone can read
+       })
+     );
+ 
+
     const getLinkLambda = new lambdaNodejs.NodejsFunction(
       this,
       "GetLinkFunction",
       {
         runtime: lambda.Runtime.NODEJS_20_X,
-        entry: "./lambdas/links/getLinkLambda.ts",
+        entry: "./lambdas/links/getLink.ts",
         functionName: "GetLink",
         handler: "handler",
         memorySize: 400,
@@ -284,8 +316,7 @@ export class CdkApiGatewayStack extends cdk.Stack {
       }
     );
 
-    // Grant Lambda permission to access the DynamoDB table
-    devlinksTable.grantWriteData(createLinkLambda);
+    devlinksTable.grantReadData(getLinkLambda)
 
     const createLinkResource = api.root.addResource("link");
     createLinkResource.addMethod(

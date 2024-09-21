@@ -1,37 +1,26 @@
-import { useLinkForm } from "../../../hooks/useLinkForm";
 import { Button, Box, useTheme } from "@mui/material";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../../../store";
-import { setLinks } from "../../../store/slices/linksSlice";
 import Header from "./header";
 import Card from "./card";
 import Footer from "./footer";
-import { linkFormSchema } from "./schema";
 import GetStartedComponent from "./getStarted";
-import { useEffect } from "react";
+import { useLinks } from "../../context/link";
 
 export type FormValues = {
   links: { platform: string; link: string }[];
 };
 
 const LinkForm = () => {
-  const dispatch = useDispatch();
   const theme = useTheme();
-  const { control, handleSubmit, errors, fields, append, remove, move } = useLinkForm();
 
-  useEffect(() => {
-    dispatch(setLinks({
-        links: fields
-      }));
-  }, [fields])
-  
+  const {fields, move, append, handleSubmit} = useLinks()
+
+
 
   // Handle form submission
   const onSubmit = (data: FormValues) => {
-    // dispatch(setLinks({
-    //   links: [...data.links]
-    // }));
+    console.log("🚀 ~ onSubmit ~ data:", data)
+
   };
 
   // Handle drag and drop
@@ -41,7 +30,7 @@ const LinkForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} style={{ padding: "10px 20px" }}>
+    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px" }}>
       <Box
         sx={{
           display: "flex",
@@ -91,12 +80,9 @@ const LinkForm = () => {
                 <Box {...provided.droppableProps} ref={provided.innerRef}>
                   {fields.map((field, index) => (
                     <Card
-                      control={control}
                       key={field.id}
                       field={field}
                       index={index}
-                      remove={remove}
-                      errors={errors}
                     />
                   ))}
                   {provided.placeholder}
