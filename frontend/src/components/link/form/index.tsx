@@ -1,5 +1,4 @@
-import { useForm, useFieldArray } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
+import { useLinkForm } from "../../../hooks/useLinkForm";
 import { Button, Box, useTheme } from "@mui/material";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,23 +18,7 @@ export type FormValues = {
 const LinkForm = () => {
   const dispatch = useDispatch();
   const theme = useTheme();
-  const linksState = useSelector((state: RootState) => state.links);
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: yupResolver(linkFormSchema as any),
-    defaultValues: {
-      links: [...linksState.links], // Shallow copy to avoid mutations
-    },
-  });
-
-  const { fields, append, remove, move } = useFieldArray({
-    control,
-    name: "links",
-  });
+  const { control, handleSubmit, errors, fields, append, remove, move } = useLinkForm();
 
   useEffect(() => {
     dispatch(setLinks({
