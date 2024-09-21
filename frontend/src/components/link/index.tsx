@@ -1,6 +1,5 @@
 import { Button, Box, useTheme, useMediaQuery } from "@mui/material";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
-import { FaPlus } from "react-icons/fa";
 import Header from "./header";
 import Card from "./card";
 import Footer from "./footer";
@@ -77,7 +76,7 @@ const LinkForm = () => {
         {/* Fixed Header */}
         <Box sx={{ flexShrink: 0 }}>
           <Header />
-          {!isMobile && renderAddLinkButton()}
+          {renderAddLinkButton()}
         </Box>
 
         {/* Scrollable Cards Section */}
@@ -94,30 +93,6 @@ const LinkForm = () => {
         {/* Fixed Footer */}
         {fields.length !== 0 && <Footer />}
       </Box>
-      {isMobile && (
-        <Button
-          variant="contained"
-          onClick={() => append({ platform: "Github", link: "" })}
-          disabled={fields.length >= 5}
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "20px",
-            borderRadius: "50%",
-            minWidth: "50px",
-            minHeight: "50px",
-            padding: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: theme.palette.primary.main,
-            color: theme.palette.common.white,
-            cursor: fields.length >= 5 ? "not-allowed" : "pointer",
-          }}
-        >
-          <FaPlus />
-        </Button>
-      )}
     </form>
   );
 };
