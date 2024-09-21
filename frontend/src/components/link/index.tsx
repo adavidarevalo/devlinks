@@ -64,7 +64,7 @@ const LinkForm = () => {
   );
 
   return (
-    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", background: "red", height: "100vh" }}>
+    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", background: "red", flex: 1 }}>
       <Box
         style={{
           display: "flex",

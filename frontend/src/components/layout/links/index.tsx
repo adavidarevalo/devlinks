@@ -27,6 +27,7 @@ const CustomizeLinksLayout = ({ children }: CustomizeLinksLayoutProps) => {
       sx={{
         flexGrow: 1,
         padding: isMobile ? "0px" : "20px",
+        height: "100vh", // Ensure the layout takes full viewport height
       }}
     >
       <Grid container rowSpacing={3} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
