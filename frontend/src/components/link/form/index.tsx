@@ -74,14 +74,29 @@ const LinkForm = () => {
                   }}
                 >
                   {values.links.map((link, index) => (
-                    <Card
-                      key={index}
-                      field={link}
-                      index={index}
-                      remove={remove}
-                      errors={errors}
-                      handleChange={handleChange}
-                    />
+                    <TextField
+                      name={`links.${index}.platform`}
+                      value={link.platform}
+                      onChange={handleChange}
+                      select
+                      fullWidth
+                      displayEmpty
+                      variant="outlined"
+                      error={Boolean(errors.links && errors.links[index]?.platform)}
+                      helperText={errors.links && errors.links[index]?.platform}
+                    >
+                      <MenuItem value="" disabled>
+                        Select Platform
+                      </MenuItem>
+                      {platforms.map((platform) => (
+                        <MenuItem key={platform.name} value={platform.name}>
+                          <Box style={{ marginRight: "5px" }}>
+                            {<platform.icon />}
+                          </Box>{" "}
+                          {platform.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
                   ))}
                 </Box>
               </>
