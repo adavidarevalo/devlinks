@@ -52,7 +52,7 @@ const LinkForm = () => {
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="links">
         {(provided) => (
-          <Box {...provided.droppableProps} ref={provided.innerRef}>
+          <Box {...provided.droppableProps} ref={provided.innerRef} minHeight={"55vh"}>
             {fields.map((field, index) => (
               <Card key={field.id} field={field} index={index} />
             ))}
@@ -64,7 +64,7 @@ const LinkForm = () => {
   );
 
   return (
-    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", background: "red", flex: 1 }}>
+    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", flex: 1 }}>
       <Box
         style={{
           display: "flex",
