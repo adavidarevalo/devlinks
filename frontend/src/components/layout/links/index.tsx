@@ -20,14 +20,13 @@ interface CustomizeLinksLayoutProps {
 }
 
 const CustomizeLinksLayout = ({ children }: CustomizeLinksLayoutProps) => {
-  const isMobile = useMediaQuery("(max-width:600px)");
+  const isMobile = useMediaQuery("(max-width:890px)");
 
   return (
     <Box
       sx={{
         flexGrow: 1,
-        minHeight: "100vh",
-        padding: "10px",
+        padding: isMobile ? "0px" : "20px",
       }}
     >
       <Grid container rowSpacing={3} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
@@ -35,7 +34,7 @@ const CustomizeLinksLayout = ({ children }: CustomizeLinksLayoutProps) => {
           <Header />
         </Grid>
 
-        <Grid size={isMobile ? 12 : 5} display={isMobile ? "none" : "grid"}>
+        <Grid size={isMobile ? 12 : 5} display={isMobile ? "none" : "grid"} >
           <PhonePreview />
         </Grid>
         <Grid size={isMobile ? 12 : 7}>
@@ -43,8 +42,7 @@ const CustomizeLinksLayout = ({ children }: CustomizeLinksLayoutProps) => {
             style={{
               borderRadius: "8px",
               background: "white",
-              height: "calc(100vh - 100px)",
-              minHeight: "710px",
+              minHeight: isMobile ? "calc(100vh - 100px)" : "710px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
             }}
           >
