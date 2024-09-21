@@ -64,12 +64,12 @@ const LinkForm = () => {
   );
 
   return (
-    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", background: "red" }}>
+    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", background: "red", height: "100vh" }}>
       <Box
         style={{
           display: "flex",
           flexDirection: "column",
-          flexGrow: 1,
+          flex: 1,
           padding: isMobile ? "5px" : "10px 20px",
         }}
       >
