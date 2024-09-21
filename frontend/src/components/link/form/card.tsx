@@ -54,9 +54,13 @@ export default function Card({ field, index }: CardProps) {
           <Controller
             name={`links.${index}.platform`}
             control={control!}
-            render={({ field }) => (
+            render={({ field: { onChange, onBlur, value, ref } }) => (
               <Select
                 {...field}
+                value={value}
+                onChange={onChange}
+                onBlur={onBlur}
+                ref={ref}
                 fullWidth
                 displayEmpty
                 IconComponent={IoIosArrowDown}
