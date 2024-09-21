@@ -25,7 +25,7 @@ const LinkForm = () => {
   } = useForm<FormValues>({
     resolver: yupResolver(linkFormSchema as any),
     defaultValues: {
-      links: [{ platform: "", link: "" }],
+      links: linksState.links
     },
   });
 
@@ -34,8 +34,11 @@ const LinkForm = () => {
     name: "links",
   });
 
+  console.log("fields ", fields)
+
   // Handle form submission
   const onSubmit = (data: FormValues) => {
+    console.log("🚀 ~ onSubmit ~ data:", data)
     dispatch(setLinks(data));
   };
 
@@ -91,11 +94,11 @@ const LinkForm = () => {
                 <Box {...provided.droppableProps} ref={provided.innerRef}>
                   {fields.map((field, index) => (
                     <Card
+                    control={control}
                       key={field.id}
                       field={field}
                       index={index}
                       remove={remove}
-                      control={control}
                       errors={errors}
                     />
                   ))}
