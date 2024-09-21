@@ -2,6 +2,9 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Button, Box, useTheme } from "@mui/material";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../../../store";
+import { setLinks } from "../../../store/slices/linksSlice";
 import Header from "./header";
 import Card from "./card";
 import Footer from "./footer";
@@ -12,7 +15,9 @@ export type FormValues = {
 };
 
 const LinkForm = () => {
+  const dispatch = useDispatch();
   const theme = useTheme();
+  const linksState = useSelector((state: RootState) => state.links);
   const {
     control,
     handleSubmit,
@@ -31,7 +36,7 @@ const LinkForm = () => {
 
   // Handle form submission
   const onSubmit = (data: FormValues) => {
-    console.log("Form Data:", data);
+    dispatch(setLinks(data));
   };
 
   // Handle drag and drop
