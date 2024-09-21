@@ -1,14 +1,14 @@
-import React from 'react'
-import { Route } from 'react-router-dom';
-import LoginPage from '../pages/login';
-import RegisterPage from '../pages/register';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LoginPage from "../pages/login";
+import RegisterPage from "../pages/register";
 
 export default function PublicRoutes() {
   return (
-      <>
-        <Route path="/login" element={<LoginPage />} /> 
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-      </>
-  )
+      </Routes>
+    </BrowserRouter>
+  );
 }
-

@@ -3,13 +3,13 @@ import {
   Controller,
   FieldArrayWithId,
 } from "react-hook-form";
-import { FormValues } from ".";
 import { Box, MenuItem, Select, Typography } from "@mui/material";
-import FormInput from "../../form/input";
+import FormInput from "../form/input";
 import { IoIosArrowDown } from "react-icons/io";
-import { platforms } from "../../../utils/const/plataforms";
+import { platforms } from "../../utils/const/plataforms";
 import _ from "lodash";
-import { useLinks } from "../../context/link";
+import { useLinks } from "../context/link";
+import { FormValues } from ".";
 
 interface CardProps {
   field: FieldArrayWithId<FormValues, "links", "id">;

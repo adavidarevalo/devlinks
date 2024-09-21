@@ -1,9 +1,15 @@
-import { Route } from 'react-router-dom';
-import ProfilePage from '../pages/profile';
-// import HomePage from '../pages/home';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { LinksProvider } from "../components/context/link";
+import LinksPage from "../pages/links";
 
 export default function PrivateRoutes() {
   return (
-      <Route path="/profile" element={<ProfilePage />} /> 
-  )
+    <LinksProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/links" element={<LinksPage />} />
+        </Routes>
+      </BrowserRouter>
+    </LinksProvider>
+  );
 }

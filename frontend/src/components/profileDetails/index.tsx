@@ -3,7 +3,7 @@ import { Button, Box, Typography } from "@mui/material";
 import { FiUpload } from "react-icons/fi";
 import FormInput from "../form/input";
 import { useLinks } from "../context/link";
-import Footer from "../link/form/footer";
+import Footer from "../link/footer";
 
 const ProfileDetails = () => {
   const [profilePic, setProfilePic] = useState(null);

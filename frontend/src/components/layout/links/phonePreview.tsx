@@ -28,6 +28,8 @@ export default function PhonePreview() {
         height: "calc(100vh - 100px)",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
         minHeight: "710px",
+        position: "sticky", 
+        top: 0
       }}
       display={"flex"}
       justifyContent={"center"}

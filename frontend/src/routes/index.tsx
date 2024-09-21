@@ -1,14 +1,11 @@
-import { BrowserRouter as Router, Routes } from 'react-router-dom';
-import PublicRoutes from './public';
-import PrivateRoutes from './private';
+import PublicRoutes from "./public";
+import PrivateRoutes from "./private";
 
 export default function MainRoutes() {
-    return (
-        <Router>
-          <Routes>
-            <PublicRoutes/>
-            <PrivateRoutes/> 
-          </Routes>
-        </Router>
-      )
+  return (
+    <>
+    <PublicRoutes/>
+    <PrivateRoutes/>
+    </>
+  );
 }

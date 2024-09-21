@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import NoLinksIcon from "../../../assets/NoLinksIcon";
+import NoLinksIcon from "../../assets/NoLinksIcon";
 
 const GetStartedComponent = () => {
   return (

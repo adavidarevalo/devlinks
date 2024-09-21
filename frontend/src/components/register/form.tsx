@@ -1,12 +1,12 @@
 import { registerSchema } from "./schema";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useHistory } from 'react-router-dom';
+// import { useHistory } from 'react-router-dom';
 import { useForm } from "react-hook-form";
 import { Box, Typography } from "@mui/material";
 import FormInput from "../form/input";
 import { FaEnvelopeOpenText, FaLock, FaUser } from "react-icons/fa";
 import SubmitButton from "../form/submitButton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthenticationService from "./../../services/auth"
 import _ from "lodash"
 import { useDispatch } from "react-redux";
@@ -24,6 +24,7 @@ type FormData = {
 export default function RegisterForm() {
   const dispatch = useDispatch<AppDispatch>();
   const [loading, setLoading] = useState(false); // Add loading state
+  const navigate = useNavigate();
 
   const {
     control,
@@ -33,7 +34,7 @@ export default function RegisterForm() {
     resolver: yupResolver(registerSchema),
   });
 
-  const history = useHistory();
+  // const history = useHistory();
 
   const onSubmit = async (data: FormData) => {
     setLoading(true); // Set loading to true
@@ -47,7 +48,7 @@ export default function RegisterForm() {
         type: "success",
         message: _.get(user, "message", "User created.")
       }));
-      history.push('/login');
+      navigate('/login');
     } catch (error) {
       console.error(error);
       dispatch(addMessage({

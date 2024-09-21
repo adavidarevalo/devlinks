@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { loginSchema } from "./schema";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -7,14 +7,13 @@ import FormInput from "../form/input";
 import EmailIcon from "../../assets/EmailIcon";
 import LockIcon from "../../assets/platforms/LockIcon";
 import SubmitButton from "../form/submitButton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthenticationService from "./../../services/auth";
 import _ from "lodash";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../../store";
 import { addMessage } from "../../store/slices/globalSlice";
 import { setStorage } from "../../utils/localstorage";
-import { useHistory } from 'react-router-dom';
 
 type FormData = {
   email: string;
@@ -23,8 +22,8 @@ type FormData = {
 
 export default function LoginForm() {
   const dispatch = useDispatch<AppDispatch>();
-  const history = useHistory();
   const [loading, setLoading] = useState(false); // Added loading state
+  const navigate = useNavigate();
 
   const {
     control,
@@ -49,7 +48,7 @@ export default function LoginForm() {
           message: "Login successful.",
         })
       );
-      history.push("/profile"); // Redirect to /profile on success
+      navigate("/links"); // Redirect to /profile on success
     } catch (error) {
       console.error(error);
       dispatch(
