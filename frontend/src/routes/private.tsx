@@ -4,8 +4,6 @@ import ProfilePage from '../pages/profile';
 
 export default function PrivateRoutes() {
   return (
-    <>
       <Route path="/profile" component={ProfilePage} /> 
-    </>
   )
 }
