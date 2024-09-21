@@ -14,6 +14,9 @@ const LinkForm = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:600px)");
   const { fields, move, append, handleSubmit } = useLinks();
+  const addLink = () => {
+    append({ platform: "Github", link: "" }, false); // The second argument 'false' prevents focus/scroll
+  };
 
   // Handle form submission
   const onSubmit = (data: FormValues) => {
@@ -29,7 +32,7 @@ const LinkForm = () => {
   const renderAddLinkButton = () => (
     <Button
       variant="outlined"
-      onClick={() => append({ platform: "Github", link: "" })}
+      onClick={addLink}
       disabled={fields.length >= 5}
       style={{
         marginBlock: "13px 20px",
