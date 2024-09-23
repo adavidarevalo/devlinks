@@ -18,6 +18,7 @@ const LinkForm = () => {
     append({ platform: "Github", link: "" }, { shouldFocus: false }); // /Prevents focus/scroll
   };
 
+
   // Handle form submission
   const onSubmit = (data: FormValues) => {
     console.log("🚀 ~ onSubmit ~ data:", data);
