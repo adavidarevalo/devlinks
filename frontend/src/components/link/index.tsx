@@ -15,7 +15,7 @@ const LinkForm = () => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const { fields, move, append, handleSubmit } = useLinks();
   const addLink = () => {
-    append({ platform: "Github", link: "" }, { shouldFocus: false }); // /Prevents focus/scroll
+    append({ platform: "Github", link: "" }, { shouldFocus: false });
   };
 
 
