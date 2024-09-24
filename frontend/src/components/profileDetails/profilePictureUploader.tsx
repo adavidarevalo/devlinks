@@ -35,8 +35,7 @@ const ProfilePictureUploader: React.FC = () => {
               contentType: file.type,
             };
 
-            setValue("avatar", jsonPayload as any)
-            console.log("Image prepared for server:", jsonPayload);
+            setValue("avatar", jsonPayload)
           }
         };
         reader.readAsDataURL(file);
@@ -49,6 +48,7 @@ const ProfilePictureUploader: React.FC = () => {
 
   const handleDeleteImage = () => { // {{ edit_3 }}
     setImageUrl(null);
+    setValue("avatar", undefined)
   };
 
   return (
@@ -60,6 +60,7 @@ const ProfilePictureUploader: React.FC = () => {
       bgcolor="white"
       borderRadius={2}
       boxShadow={1}
+      marginBlock={"20px"}
       sx={{ width: '100%', maxWidth: 600 }}
     >
       {/* Profile Picture Text */}

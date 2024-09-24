@@ -1,12 +1,14 @@
-import { Button, IconButton, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Button, IconButton, useMediaQuery, useTheme } from "@mui/material";
 import { IoEyeOutline } from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
 
 export default function PrevButton() {
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:600px)");
+  const navigate = useNavigate();
 
   return (
-    <>
+    <Box onClick={() => navigate("/preview")}>
       {isMobile ? (
         <IconButton
           color="primary"
@@ -34,6 +36,6 @@ export default function PrevButton() {
           {"Preview"}
         </Button>
       )}
-    </>
+    </Box>
   );
 }

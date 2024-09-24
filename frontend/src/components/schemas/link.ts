@@ -11,5 +11,10 @@ export const linkFormSchema = yup.object().shape({
         link: yup.string().url('Must be a valid URL').required('Link is required'),
       })
     )
-    .required(), // Make sure this is required
+    .required('At least one link is required')
+    .test('unique-platform', 'Platform must be unique', (links) => {
+      if (!links) return true; // Return true if no links provided (validating other required conditions)
+      const platforms = links.map(link => link.platform);
+      return new Set(platforms).size === platforms.length; // Ensures all platform values are unique
+    }),
 });

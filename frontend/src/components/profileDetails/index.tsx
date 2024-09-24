@@ -77,6 +77,7 @@ const ProfileDetails = () => {
           style={{ background: "#f9f9f9" }}
           padding={"10px 20px"}
           borderRadius={"7px"}
+          marginBottom={"20px"}
         >
           <FormInput
             name="firstName"

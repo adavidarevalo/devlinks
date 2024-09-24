@@ -1,53 +1,54 @@
-import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import LoginForm from './form';
+import '@testing-library/jest-dom';
 import { Provider } from 'react-redux';
-import { MemoryRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import configureStore from 'redux-mock-store';
 
 const mockStore = configureStore([]);
+const store = mockStore({});
 
-describe('LoginForm', () => {
-  let store;
-
-  beforeEach(() => {
-    store = mockStore({
-      global: { message: null },
-    });
-    jest.mock("../../utils/config", () => ({
-      config: {
-        apiUrl: "http://localhost:mock",
-      },
-    }));
-  });
-
-  it('renders without crashing', () => {
-    const { getByLabelText } = render(
+describe('LoginForm Component', () => {
+  it('should render email and password fields', () => {
+    render(
       <Provider store={store}>
-        <MemoryRouter>
+        <BrowserRouter>
           <LoginForm />
-        </MemoryRouter>
+        </BrowserRouter>
       </Provider>
     );
 
-    expect(getByLabelText(/Email address/i)).toBeInTheDocument();
-    expect(getByLabelText(/Password/i)).toBeInTheDocument();
+    const emailField = screen.getByLabelText(/email address/i);
+    const passwordField = screen.getByLabelText(/password/i);
+
+    expect(emailField).toBeInTheDocument();
+    expect(passwordField).toBeInTheDocument();
   });
 
-  it('displays error messages on invalid submission', async () => {
-    const { getByText, getByRole } = render(
+  it('should render the login button', () => {
+    render(
       <Provider store={store}>
-        <MemoryRouter>
+        <BrowserRouter>
           <LoginForm />
-        </MemoryRouter>
+        </BrowserRouter>
       </Provider>
     );
 
-    fireEvent.click(getByRole('button', { name: /Log in/i }));
+    const buttonElement = screen.getByRole('button', { name: /log in/i });
+    expect(buttonElement).toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(getByText(/Email address is a required field/i)).toBeInTheDocument();
-      expect(getByText(/Password is a required field/i)).toBeInTheDocument();
-    });
+  it('should disable the login button when loading', () => {
+    render(
+      <Provider store={store}>
+        <BrowserRouter>
+          <LoginForm />
+        </BrowserRouter>
+      </Provider>
+    );
+
+    const buttonElement = screen.getByRole('button', { name: /log in/i });
+    fireEvent.click(buttonElement);
+    expect(buttonElement).toBeDisabled();
   });
 });

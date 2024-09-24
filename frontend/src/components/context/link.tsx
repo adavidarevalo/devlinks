@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   Control,
   FieldArrayWithId,
@@ -13,11 +13,12 @@ import {
   UseFormSetValue,
 } from "react-hook-form";
 import { linkFormSchema } from "../schemas/link";
-import LinkService from "./../../services/links"
 import { AppDispatch } from "../../store";
 import { useDispatch } from "react-redux";
 import { addMessage } from "../../store/slices/globalSlice";
 import _ from "lodash";
+import { Outlet } from 'react-router-dom';
+import LinkService from "./../../services/links"
 
 interface Link {
   platform: string;
@@ -28,7 +29,11 @@ export interface LinksState {
   firstName?: string;
   lastName?: string;
   email?: string;
-  avatar?: File;
+  avatar?: {
+    filename: string;
+    content: string;
+    contentType: string;
+  } | string;
   links: Link[]; // This should remain required
 }
 
@@ -65,7 +70,7 @@ const LinksContext = createContext<{
 });
 
 
-export const LinksProvider = ({ children }: { children: ReactNode }) => {
+export const LinksProvider = () => {
   const [view, setView] = useState<"links" | "profile">("links");
   const dispatch = useDispatch<AppDispatch>();
 
@@ -79,6 +84,17 @@ export const LinksProvider = ({ children }: { children: ReactNode }) => {
     resolver: yupResolver(linkFormSchema) as any,
     defaultValues: initialState,
   });
+
+  
+  useEffect(() => {
+    if (_.get(errors, "links.root")) {
+      dispatch(
+      addMessage({
+        type: "error",
+        message: _.get(errors, "links.root.message", "Unexpected Error")
+      }))
+    }
+  }, [errors])
 
   useEffect(() => {
     getData()
@@ -126,8 +142,8 @@ export const LinksProvider = ({ children }: { children: ReactNode }) => {
         setValue
       }}
     >
-      {children}
-    </LinksContext.Provider>
+      <Outlet />
+      </LinksContext.Provider>
   );
 };
 
