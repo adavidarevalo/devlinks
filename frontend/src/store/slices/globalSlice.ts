@@ -25,12 +25,14 @@ export const globalSlice = createSlice({
     addMessage: (state, action: PayloadAction<IAlertMessage>) => {
       state.value = action.payload;
 
-      setTimeout(() => {
-        state.value = {
-          type: undefined,
-          message: null
-        }
-      }, 5000);
+      // if (state.value) {
+      //   setTimeout(() => {
+      //     state.value = {
+      //       type: undefined,
+      //       message: null
+      //     }
+      //   }, 5000);
+      // }
     },
 
     resetMessage: (state) => {

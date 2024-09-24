@@ -1,25 +1,42 @@
 import React, { useState } from "react";
-import { Button, Box, Typography } from "@mui/material";
-import { FiUpload } from "react-icons/fi";
+import { Box, Typography } from "@mui/material";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store";
+import { addMessage } from "../../store/slices/globalSlice";
 import FormInput from "../form/input";
 import { useLinks } from "../context/link";
 import Footer from "../link/footer";
+import LinkService from "../../services/links"
+import ProfilePictureUploader from "./profilePictureUploader";
 
 const ProfileDetails = () => {
-  const [profilePic, setProfilePic] = useState(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const [loading, setLoading] = useState(false);
 
   const { control, errors, handleSubmit } = useLinks();
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setProfilePic(URL.createObjectURL(file));
+  const onSubmit = async (data) => {
+    setLoading(true);
+    try {
+      await LinkService.createLink(data);
+      // Simulate API call
+      dispatch(
+        addMessage({
+          type: "success",
+          message: "Profile updated successfully.",
+        })
+      );
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          type: "error",
+          message: "Error updating profile.",
+        })
+      );
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const onSubmit = (data) => {
-    console.log("Form Data:", data);
-    // Handle form submission logic here
   };
 
   return (
@@ -52,63 +69,7 @@ const ProfileDetails = () => {
         Add your details to create a personal touch to your profile.
       </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          backgroundColor: "#fafafa",
-          padding: 3,
-          borderRadius: 2,
-          marginBottom: 2,
-        }}
-      >
-        <Box sx={{ textAlign: "center" }}>
-          {profilePic ? (
-            <img
-              src={profilePic}
-              alt="Profile"
-              style={{
-                width: 100,
-                height: 100,
-                objectFit: "cover",
-                borderRadius: "50%",
-              }}
-            />
-          ) : (
-            <Box
-              sx={{
-                width: 100,
-                height: 100,
-                backgroundColor: "#e0e0e0",
-                borderRadius: "50%",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <FiUpload size={40} color="#888" />
-            </Box>
-          )}
-          <Typography variant="caption" display="block" gutterBottom>
-            Image must be below 1024x1024px. Use PNG or JPG format.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="contained"
-          component="label"
-          sx={{ backgroundColor: "#E6E6FA" }}
-        >
-          Upload Image
-          <input
-            hidden
-            accept="image/*"
-            type="file"
-            onChange={handleImageUpload}
-          />
-        </Button>
-      </Box>
+      <ProfilePictureUploader/>
 
       {/* Form starts here */}
       <Box onSubmit={handleSubmit?.(onSubmit)} component="form" noValidate>
@@ -121,8 +82,9 @@ const ProfileDetails = () => {
             name="firstName"
             control={control}
             errors={errors}
-            label={"Last name"}
+            label={"First name"} // {{ edit_3 }}
             placeholder="e.g. John"
+            disabled={loading} // {{ edit_4 }}
           />
 
           <FormInput
@@ -131,6 +93,7 @@ const ProfileDetails = () => {
             errors={errors}
             label={"Last name"}
             placeholder="e.g. Appleseed"
+            disabled={loading} // {{ edit_5 }}
           />
 
           <FormInput
@@ -138,9 +101,10 @@ const ProfileDetails = () => {
             control={control}
             errors={errors}
             label={"Email address"}
+            disabled={loading} // {{ edit_6 }}
           />
         </Box>
-        <Footer />
+        <Footer loading={loading}/>
       </Box>
     </Box>
   );

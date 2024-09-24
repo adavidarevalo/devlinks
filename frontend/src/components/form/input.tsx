@@ -12,6 +12,7 @@ interface FormInputProps {
   type?: string
   autoComplete?: string;
   placeholder?: string
+  disabled?: boolean
 }
 const FormInput: React.FC<FormInputProps> = ({ 
     control, 
@@ -21,7 +22,8 @@ const FormInput: React.FC<FormInputProps> = ({
     label, 
     type = "string",
     autoComplete,
-    placeholder
+    placeholder,
+    disabled
 }) => {
   return (
     <Controller
@@ -36,6 +38,7 @@ const FormInput: React.FC<FormInputProps> = ({
           fullWidth
           type={type}
           id={name}
+          disabled={disabled}
           label={label}
           autoComplete={autoComplete ?? name}
           autoFocus

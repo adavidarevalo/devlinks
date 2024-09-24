@@ -319,6 +319,7 @@ export class CdkApiGatewayStack extends cdk.Stack {
     devlinksTable.grantReadData(getLinkLambda)
 
     const createLinkResource = api.root.addResource("link");
+    createLinkResource.addCorsPreflight(corsOptions); // Enable CORS for /link
     createLinkResource.addMethod(
       "POST",
       new apigateway.LambdaIntegration(createLinkLambda),
@@ -338,5 +339,45 @@ export class CdkApiGatewayStack extends cdk.Stack {
       "GET",
       new apigateway.LambdaIntegration(getLinkLambda)
     );
+
+    const privateGetLinkLambda = new lambdaNodejs.NodejsFunction(                                                              
+      this,                                                                                                                    
+      "PrivateGetLinkFunction",                                                                                                
+      {                                                                                                                        
+        runtime: lambda.Runtime.NODEJS_20_X,                                                                                   
+        entry: "./lambdas/links/privateGetLink.ts",                                                                             
+        functionName: "PrivateGetLink",                                                                                        
+        handler: "handler",                                                                                                    
+        memorySize: 400,                                                                                                       
+        timeout: cdk.Duration.seconds(120),                                                                                    
+        environment: {                                                                                                         
+          DYNAMO_TABLE_NAME: devlinksTable.tableName,                                                                          
+        },                                                                                                                     
+        bundling: {                                                                                                            
+          minify: true,                                                                                                        
+          sourceMap: false,                                                                                                    
+        },                                                                                                                     
+      }                                                                                                                        
+    );                                                                                                                         
+                                                                                                                               
+    devlinksTable.grantReadData(privateGetLinkLambda);  
+    
+    const privateGetLinkResource = api.root.addResource("private-link");                                                       
+    privateGetLinkResource.addCorsPreflight(corsOptions); // Enable CORS for /private-link
+    privateGetLinkResource.addMethod(                                                                                          
+      "GET",                                                                                                                   
+      new apigateway.LambdaIntegration(privateGetLinkLambda),                                                                  
+      {                                                                                                                        
+        authorizationType: apigateway.AuthorizationType.COGNITO,                                                               
+        authorizer: new apigateway.CognitoUserPoolsAuthorizer(                                                                 
+          this,                                                                                                                
+          "PrivateCognitoAuthorizer",                                                                                          
+          {                                                                                                                    
+            cognitoUserPools: [userPool],                                                                                      
+          }                                                                                                                    
+        ),                                                                                                                     
+      }                                                                                                                        
+    ); 
+                                                           
   }
 }

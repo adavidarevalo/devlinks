@@ -1,7 +1,6 @@
 import Phone from "../../../assets/Phone";
 import { Box } from "@mui/material";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import test from "./../../../assets/test.jpg";
 import { platforms } from "../../../utils/const/plataforms";
 import { useLinks } from "../../context/link";
 import { useWatch } from "react-hook-form";
@@ -20,6 +19,14 @@ export default function PhonePreview() {
     move(result.source.index, result.destination.index);
   };
 
+  // Function to merge draggable styles to avoid flickering
+  const getItemStyle = (isDragging: boolean, draggableStyle: any) => ({
+    // Custom styles for the draggable item
+    background: isDragging ? "lightgray" : "white",
+    transition: "background-color 0.2s ease", // Smooth transition to avoid blinking
+    ...draggableStyle, // Apply default styles from react-beautiful-dnd
+  });
+
   return (
     <Box
       style={{
@@ -37,18 +44,6 @@ export default function PhonePreview() {
     >
       <Box position={"relative"}>
         <Phone />
-        <img
-          src={test}
-          style={{
-            width: "100px",
-            height: "100px",
-            objectFit: "cover",
-            borderRadius: "100%",
-            position: "absolute",
-            top: "59px",
-            left: "102px",
-          }}
-        />
         {firstName || lastName ? (
           <Box
             position={"absolute"}
@@ -100,13 +95,18 @@ export default function PhonePreview() {
                         draggableId={link.id}
                         index={index}
                       >
-                        {(provided) => (
+                        {(provided, snapshot) => (
                           <Box
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            style={{
-                              background: platform?.color,
+                            style={{...getItemStyle(
+                              snapshot.isDragging,
+                              provided.draggableProps.style
+                            ),
+                            backgroundColor: platform?.color,
+                          }}
+                            sx={{
                               width: "235px",
                               height: "43px",
                               padding: "10px",
@@ -115,7 +115,7 @@ export default function PhonePreview() {
                               color: "white",
                               borderRadius: "7px",
                               marginBottom: "21px",
-                              ...provided.draggableProps.style,
+                              backgroundColor: platform?.color,
                             }}
                           >
                             {platform && <platform.icon color={"white"} />}

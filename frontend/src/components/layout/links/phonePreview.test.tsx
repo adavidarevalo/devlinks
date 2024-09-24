@@ -1,9 +1,14 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import PhonePreview from './phonePreview';
-import { useLinks } from '../../context/link';
+import { LinksProvider, useLinks } from '../../context/link';
 
 jest.mock('../../context/link');
+
+const MockedComponent = () => {
+
+  return <LinksProvider><PhonePreview  /></LinksProvider>;
+};
 
 describe('PhonePreview', () => {
   it('renders without crashing', () => {
@@ -13,7 +18,7 @@ describe('PhonePreview', () => {
       move: jest.fn(),
     });
 
-    const { container } = render(<PhonePreview />);
+    const { container } = render(<MockedComponent />);
     expect(container).toBeInTheDocument();
   });
 });

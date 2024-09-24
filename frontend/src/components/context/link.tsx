@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { createContext, ReactNode, useContext, useState } from "react";
+import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import {
   Control,
   FieldArrayWithId,
@@ -10,20 +10,26 @@ import {
   UseFieldArrayRemove,
   useForm,
   UseFormHandleSubmit,
+  UseFormSetValue,
 } from "react-hook-form";
 import { linkFormSchema } from "../schemas/link";
+import LinkService from "./../../services/links"
+import { AppDispatch } from "../../store";
+import { useDispatch } from "react-redux";
+import { addMessage } from "../../store/slices/globalSlice";
+import _ from "lodash";
 
 interface Link {
   platform: string;
   link: string;
 }
 
-interface LinksState {
+export interface LinksState {
   firstName?: string;
   lastName?: string;
   email?: string;
   avatar?: File;
-  links: Link[];
+  links: Link[]; // This should remain required
 }
 
 const initialState: LinksState = {
@@ -44,6 +50,7 @@ const LinksContext = createContext<{
   fields: FieldArrayWithId<LinksState, "links", "id">[];
   setView: React.Dispatch<React.SetStateAction<"links" | "profile">>;
   view: "links" | "profile";
+  setValue: UseFormSetValue<LinksState>
 }>({
   control: null,
   errors: {},
@@ -54,19 +61,50 @@ const LinksContext = createContext<{
   fields: [],
   setView: () => {},
   view: "links",
+  setValue: () => {}
 });
+
 
 export const LinksProvider = ({ children }: { children: ReactNode }) => {
   const [view, setView] = useState<"links" | "profile">("links");
+  const dispatch = useDispatch<AppDispatch>();
 
   const {
     control,
     handleSubmit,
     formState: { errors },
+    setValue,
+    reset
   } = useForm<LinksState>({
-    resolver: yupResolver(linkFormSchema as any),
+    resolver: yupResolver(linkFormSchema) as any,
     defaultValues: initialState,
   });
+
+  useEffect(() => {
+    getData()
+  }, [])
+
+  const getData = async () => {
+    try {
+      const linkData = await LinkService.getSecureLink();
+      
+      reset(linkData); 
+    } catch (error) {
+      console.error(error);
+
+      dispatch(
+        addMessage({
+          type: "error",
+          message: _.get(
+            error,
+            "response.data.message",
+            "Error to get the Link Data."
+          ),
+        })
+      );
+    }
+  }
+  
 
   const { fields, append, remove, move } = useFieldArray<LinksState>({
     control: control!,
@@ -85,6 +123,7 @@ export const LinksProvider = ({ children }: { children: ReactNode }) => {
         move,
         view,
         setView,
+        setValue
       }}
     >
       {children}

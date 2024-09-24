@@ -30,8 +30,14 @@ export default function RegisterForm() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm({
     resolver: yupResolver(registerSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    }
   });
 
   // const history = useHistory();

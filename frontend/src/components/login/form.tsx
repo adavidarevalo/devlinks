@@ -29,7 +29,7 @@ export default function LoginForm() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm({
     resolver: yupResolver(loginSchema),
   });
 
@@ -41,24 +41,23 @@ export default function LoginForm() {
         password: data.password,
       });
 
-      setStorage("token", _.get(user, "token"));
+      setStorage("IdToken", _.get(user, "IdToken"));
+      setStorage("RefreshToken", _.get(user, "RefreshToken"));
+      setStorage("AccessToken", _.get(user, "AccessToken"));
+
       dispatch(
         addMessage({
           type: "success",
           message: "Login successful.",
         })
       );
-      navigate("/links"); // Redirect to /profile on success
+      navigate("/links");
     } catch (error) {
       console.error(error);
       dispatch(
         addMessage({
           type: "error",
-          message: _.get(
-            error,
-            "response.data.message",
-            "Error logging in."
-          ),
+          message: _.get(error, "response.data.message", "Error logging in."),
         })
       );
     } finally {
@@ -91,7 +90,10 @@ export default function LoginForm() {
         autoComplete="current-password"
         placeholder="Enter your password"
       />
-      <SubmitButton text={loading ? "Logging in..." : "Log in"} disabled={loading} />
+      <SubmitButton
+        text={loading ? "Logging in..." : "Log in"}
+        disabled={loading}
+      />
       <Box sx={{ textAlign: "center" }}>
         <Typography variant="body2">
           Don't have an account?{" "}

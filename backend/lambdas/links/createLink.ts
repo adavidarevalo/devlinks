@@ -4,7 +4,6 @@ import * as AWSXRay from 'aws-xray-sdk';
 import * as _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { extname } from 'path';
-import { parse } from 'lambda-multipart-parser'; // Import lambda-multipart-parser
 
 AWSXRay.captureAWS(require('aws-sdk'));
 
@@ -15,20 +14,23 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
   try {
     const userId = _.get(event, "requestContext.authorizer.claims.sub");
 
-    // Parse the multipart form data using lambda-multipart-parser
-    const formData = await parse(event);
+    // Parse the JSON body
+    const formData = JSON.parse(event.body || '{}');
 
     let avatarFile: any = null;
 
-    // Collect form data
-    const { firstName = '', lastName = '', files } = formData;
+    // Collect form data including Base64 encoded avatar
+    const { firstName = '', lastName = '', avatar, links = [], email = "" } = formData;
 
-    // Look for the avatar file in the files array
-    const avatar = files.find(file => file.fieldname === 'avatar');
-    
-    // Validate the avatar file type
+    // Validate and process the avatar if provided
     if (avatar && avatar.contentType?.startsWith('image/')) {
-      avatarFile = avatar;
+      // Convert Base64-encoded image to buffer
+      const avatarBuffer = Buffer.from(avatar.content, 'base64');
+      avatarFile = {
+        content: avatarBuffer,
+        contentType: avatar.contentType,
+        filename: `${nanoid()}${extname(avatar.filename)}`,
+      };
     } else if (avatar) {
       throw new Error('Invalid file type, only images are allowed');
     }
@@ -55,32 +57,19 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
         const oldAvatarKey = existingItem.Item.avatar.split('.com/')[1];
         await s3
           .deleteObject({
-            Bucket: bucketName, // Use the bucket name here
+            Bucket: bucketName,
             Key: oldAvatarKey,
           })
           .promise();
       }
 
-      // // Upload new avatar - Ensure the content is uploaded as a Buffer
-      // const uploadResult = await s3
-      //   .upload({
-      //     Bucket: bucketName,
-      //     Key: s3Key,
-      //     Body: Buffer.from(avatarFile.content),  // Convert content to Buffer
-      //     ContentType: avatarFile.contentType,    // Set content type (e.g., image/jpeg)
-      //   })
-      //   .promise();
-      // const base64Data = avatarFile.content.replace(/^data:image\/\w+;base64,/, "");
-      // const buffer = Buffer.from(base64Data, 'base64');
-console.log("X1 ", avatarFile.content)
-
- const uploadResult = await s3.upload({
+      // Upload new avatar to S3
+      const uploadResult = await s3.upload({
         Bucket: bucketName,
         Key: s3Key,
-        Body: avatarFile.content,  // Use the Buffer directly
-        ContentType: avatarFile.contentType,    // Set content type (e.g., image/jpeg)
+        Body: avatarFile.content, // Buffer from Base64
+        ContentType: avatarFile.contentType,
       }).promise();
-
 
       avatarUrl = uploadResult.Location;
     }
@@ -90,11 +79,13 @@ console.log("X1 ", avatarFile.content)
       avatar: avatarUrl,
       firstName,
       lastName,
+      links,
+      email,
       id: existingItem.Item ? existingItem.Item.id : nanoid(),
     };
 
     if (!existingItem.Item) {
-      // Item does not exist, create a new one
+      // Create new item in DynamoDB
       await dynamodb
         .put({
           TableName: process.env.DYNAMO_TABLE_NAME!,
@@ -104,16 +95,15 @@ console.log("X1 ", avatarFile.content)
 
       return {
         statusCode: 201,
-        body: JSON.stringify({ message: 'User links created successfully', item }),
+        body: JSON.stringify({ message: 'User created successfully', item }),
       };
     } else {
-      // Item exists, update the existing item
+      // Update existing item in DynamoDB
       await dynamodb
         .update({
           TableName: process.env.DYNAMO_TABLE_NAME!,
           Key: { userId },
-          UpdateExpression:
-            'set avatar = :avatar, firstName = :firstName, lastName = :lastName',
+          UpdateExpression: 'set avatar = :avatar, firstName = :firstName, lastName = :lastName',
           ExpressionAttributeValues: {
             ':avatar': avatarUrl || '',
             ':firstName': firstName,
@@ -124,7 +114,7 @@ console.log("X1 ", avatarFile.content)
 
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: 'User links updated successfully', item }),
+        body: JSON.stringify({ message: 'User updated successfully', item }),
       };
     }
   } catch (error: any) {
@@ -138,7 +128,7 @@ console.log("X1 ", avatarFile.content)
 
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Error creating or updating user links', error: error.message }),
+      body: JSON.stringify({ message: 'Error creating or updating user', error: error.message }),
     };
   }
 };

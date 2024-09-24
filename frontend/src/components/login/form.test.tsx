@@ -14,6 +14,11 @@ describe('LoginForm', () => {
     store = mockStore({
       global: { message: null },
     });
+    jest.mock("../../utils/config", () => ({
+      config: {
+        apiUrl: "http://localhost:mock",
+      },
+    }));
   });
 
   it('renders without crashing', () => {

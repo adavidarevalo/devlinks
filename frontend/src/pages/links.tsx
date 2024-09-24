@@ -10,8 +10,8 @@ export default function LinksPage() {
     <Box style={{ height: "100vh" }}>
       <CustomizeLinksLayout>
         <>
-          {view === "links" && <LinkForm />}
-          {view === "profile" && <ProfileDetails />}
+        {view === "profile" && <ProfileDetails />}
+        {view === "links" && <LinkForm />}
         </>
       </CustomizeLinksLayout>
     </Box>

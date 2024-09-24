@@ -1,7 +1,12 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node", // Add this line
+    "jsx": "react-jsx",  // For React, adjust if necessary
+    "allowJs": true,
+    "noEmit": true,
+  },
+  "include": ["src", "setupTests.ts"]
 }

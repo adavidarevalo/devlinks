@@ -5,23 +5,52 @@ import Card from "./card";
 import Footer from "./footer";
 import GetStartedComponent from "./getStarted";
 import { useLinks } from "../context/link";
+import { useRef, useState } from "react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store";
+import { addMessage } from "../../store/slices/globalSlice";
+import LinkService from "./../../services/links"
 
 export type FormValues = {
   links: { platform: string; link: string }[];
 };
 
 const LinkForm = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:600px)");
   const { fields, move, append, handleSubmit } = useLinks();
+
+  const containerRef = useRef(null);
+
+
   const addLink = () => {
     append({ platform: "Github", link: "" }, { shouldFocus: false });
   };
 
-
   // Handle form submission
-  const onSubmit = (data: FormValues) => {
-    console.log("🚀 ~ onSubmit ~ data:", data);
+  const onSubmit = async (data: FormValues) => {
+    setLoading(true);
+    try {
+      await LinkService.createLink(data);
+      dispatch(
+        addMessage({
+          type: "success",
+          message: "Link created successfully.",
+        })
+      );
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          type: "error",
+          message: "Error creating link.",
+        })
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle drag and drop
@@ -34,7 +63,7 @@ const LinkForm = () => {
     <Button
       variant="outlined"
       onClick={addLink}
-      disabled={fields.length >= 5}
+      disabled={fields.length >= 5 || loading}
       style={{
         marginBlock: "13px 20px",
         fontSize: "13px",
@@ -68,7 +97,14 @@ const LinkForm = () => {
   );
 
   return (
-    <form onSubmit={handleSubmit?.(onSubmit)} style={{ padding: "10px 20px", display: "flex", flexDirection: "column", flex: 1 }}>
+    <form onSubmit={handleSubmit?.(onSubmit)} style={{ 
+      display: "flex",
+      flexDirection: "column",
+      flex: 1,
+      padding: isMobile ? "5px" : "10px 20px",
+    }}
+    ref={containerRef}
+    >
       <Box
         style={{
           display: "flex",
@@ -88,14 +124,13 @@ const LinkForm = () => {
           sx={{
             flexGrow: 1,
             marginBottom: "20px",
-            overflowY: "auto", // Added to allow scrolling
           }}
         >
           {fields.length === 0 ? <GetStartedComponent /> : renderCards()}
         </Box>
 
         {/* Fixed Footer */}
-        {fields.length !== 0 && <Footer />}
+        {fields.length !== 0 && <Footer loading={loading}/>}
       </Box>
     </form>
   );

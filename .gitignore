@@ -31,3 +31,4 @@ dist-ssr
 
 cdk.out
 cdk.context.json
+*storybook.log
