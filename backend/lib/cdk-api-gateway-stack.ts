@@ -10,45 +10,127 @@ import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as certificates from "aws-cdk-lib/aws-certificatemanager";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
-import * as s3n from "aws-cdk-lib/aws-s3-notifications";
-import { nanoid } from 'nanoid';
 
 export class CdkApiGatewayStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
-      domainName: process.env.AWS_DOMAIN_NAME as string,
+    const domainName = process.env.AWS_DOMAIN_NAME as string;
+    const hostedZone = this.createHostedZone(domainName);
+    const certificate = this.createCertificate(domainName, hostedZone);
+    const customDomain = this.createApiGatewayDomain(domainName, certificate);
+    this.createApiGatewayAliasRecord(customDomain, hostedZone);
+    const userPool = this.createCognitoUserPool();
+    const userPoolClient = this.createCognitoUserPoolClient(userPool);
+    
+    const registerLambda = this.createLambdaFunction("RegisterFunction", "./lambdas/auth/register.ts", {
+      USER_POOL_ID: userPool.userPoolId,
+      CLIENT_ID: userPoolClient.userPoolClientId,
     });
 
-    // Define ACM certificate with DNS validation
-    const certificate = new certificates.Certificate(this, "AppCertificate", {
-      domainName: process.env.AWS_DOMAIN_NAME as string,
-      subjectAlternativeNames: [`*.${process.env.AWS_DOMAIN_NAME as string}`], // Wildcard SAN
+    const loginLambda = this.createLambdaFunction("LoginFunction", "./lambdas/auth/login.ts", {
+      CLIENT_ID: userPoolClient.userPoolClientId,
+    });
+
+    this.grantCognitoPermissions(registerLambda, userPool);
+    this.grantCognitoPermissions(loginLambda, userPool, ["cognito-idp:InitiateAuth"]);
+
+    const api = this.createApiGateway();
+
+    const requestValidator = this.createRequestValidator(api);
+    const registerRequestModel = this.createRequestModel(api, "RegisterRequestModel", {
+      email: { type: apigateway.JsonSchemaType.STRING },
+      username: { type: apigateway.JsonSchemaType.STRING },
+      password: { type: apigateway.JsonSchemaType.STRING },
+    });
+
+    const loginRequestModel = this.createRequestModel(api, "LoginRequestModel", {
+      username: { type: apigateway.JsonSchemaType.STRING },
+      password: { type: apigateway.JsonSchemaType.STRING },
+    });
+
+    this.createApiMethods(api, registerLambda, loginLambda, requestValidator, registerRequestModel, loginRequestModel);
+
+    const devlinksTable = this.createDynamoDBTable();
+    const s3Bucket = this.createS3Bucket();
+
+    const createLinkLambda = this.createLambdaFunction("CreateLinkFunction", "./lambdas/links/createLink.ts", {
+      USER_POOL_ID: userPool.userPoolId,
+      DYNAMO_TABLE_NAME: devlinksTable.tableName,
+      S3_BUCKET_NAME: s3Bucket.bucketName,
+    });
+
+    this.grantTableAndBucketPermissions(createLinkLambda, devlinksTable, s3Bucket);
+
+    const getLinkLambda = this.createLambdaFunction("GetLinkFunction", "./lambdas/links/getLink.ts", {
+      DYNAMO_TABLE_NAME: devlinksTable.tableName,
+    });
+
+    this.grantTablePermissions(getLinkLambda, devlinksTable);
+    
+    const linkResource = api.root.addResource("link");
+    this.addCorsToResource(linkResource);
+    this.addLinkResourceMethods(linkResource, createLinkLambda, getLinkLambda, userPool);
+
+    const privateGetLinkLambda = this.createLambdaFunction("PrivateGetLinkFunction", "./lambdas/links/privateGetLink.ts", {
+      DYNAMO_TABLE_NAME: devlinksTable.tableName,
+    });
+    
+    this.grantTablePermissions(privateGetLinkLambda, devlinksTable);
+    
+    const privateGetLinkResource = api.root.addResource("privateLink");
+    this.addCorsToResource(privateGetLinkResource);
+    privateGetLinkResource.addMethod("GET", new apigateway.LambdaIntegration(privateGetLinkLambda),  {                                                                                                                        
+      authorizationType: apigateway.AuthorizationType.COGNITO,                                                               
+      authorizer: new apigateway.CognitoUserPoolsAuthorizer(                                                                 
+        this,                                                                                                                
+        "PrivateCognitoAuthorizer",                                                                                          
+        {                                                                                                                    
+          cognitoUserPools: [userPool],                                                                                      
+        }                                                                                                                    
+      ),                                                                                                                     
+    } );
+
+    // Custom domain mapping
+    new apigateway.BasePathMapping(this, "BasePathMapping", {
+      domainName: customDomain,
+      restApi: api,
+      stage: api.deploymentStage,
+    });
+  }
+
+  private createHostedZone(domainName: string) {
+    return route53.HostedZone.fromLookup(this, "HostedZone", {
+      domainName,
+    });
+  }
+
+  private createCertificate(domainName: string, hostedZone: route53.IHostedZone) {
+    return new certificates.Certificate(this, "AppCertificate", {
+      domainName,
+      subjectAlternativeNames: [`*.${domainName}`], // Wildcard SAN
       validation: certificates.CertificateValidation.fromDns(hostedZone), // Use Route 53 for DNS validation
     });
+  }
 
-    // Create API Gateway custom domain
-    const domainName = `backend.${process.env.AWS_DOMAIN_NAME as string}`;
-
-    const customDomain = new apigateway.DomainName(this, "CustomDomain", {
-      domainName: domainName,
-      certificate: certificate,
+  private createApiGatewayDomain(domainName: string, certificate: certificates.ICertificate) {
+    return new apigateway.DomainName(this, "CustomDomain", {
+      domainName: `backend.${domainName}`,
+      certificate,
     });
+  }
 
-    // Create A record in Route 53 for API custom domain
+  private createApiGatewayAliasRecord(customDomain: apigateway.IDomainName, hostedZone: route53.IHostedZone) {
     new route53.ARecord(this, "ApiAliasRecord", {
       recordName: "backend",
-      target: route53.RecordTarget.fromAlias(
-        new route53Targets.ApiGatewayDomain(customDomain)
-      ),
+      target: route53.RecordTarget.fromAlias(new route53Targets.ApiGatewayDomain(customDomain)),
       zone: hostedZone,
       ttl: cdk.Duration.minutes(1), // TTL for the DNS record
     });
+  }
 
-    // Define Cognito User Pool
-    const userPool = new cognito.UserPool(this, "UserPool", {
+  private createCognitoUserPool() {
+    return new cognito.UserPool(this, "UserPool", {
       signInAliases: {
         email: true,
         username: true,
@@ -62,322 +144,139 @@ export class CdkApiGatewayStack extends cdk.Stack {
       },
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test environments
     });
+  }
 
-    // Define Cognito User Pool Client
-    const userPoolClient = new cognito.UserPoolClient(this, "UserPoolClient", {
-      userPool: userPool,
+  private createCognitoUserPoolClient(userPool: cognito.IUserPool) {
+    return new cognito.UserPoolClient(this, "UserPoolClient", {
+      userPool,
       authFlows: {
         userPassword: true,
         adminUserPassword: true,
       },
       generateSecret: false,
     });
+  }
 
-    // Define Lambda Functions
-    const registerLambda = new lambdaNodejs.NodejsFunction(
-      this,
-      "RegisterFunction",
-      {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        entry: "./lambdas/auth/register.ts",
-        functionName: "RegisterUser",
-        handler: "handler",
-        memorySize: 400, // Increase memory if needed
-        timeout: cdk.Duration.seconds(120), // Increase timeout if needed
-        bundling: {
-          minify: true,
-          sourceMap: false,
-        },
-        environment: {
-          USER_POOL_ID: userPool.userPoolId,
-          CLIENT_ID: userPoolClient.userPoolClientId,
-        },
-        tracing: lambda.Tracing.ACTIVE,
-        insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_119_0,
-      }
-    );
-
-    const loginLambda = new lambdaNodejs.NodejsFunction(this, "LoginFunction", {
+  private createLambdaFunction(functionName: string, entry: string, environment: { [key: string]: string }) {
+    return new lambdaNodejs.NodejsFunction(this, functionName, {
       runtime: lambda.Runtime.NODEJS_20_X,
-      entry: "./lambdas/auth/login.ts",
-      functionName: "LoginUser",
+      entry,
+      functionName,
       handler: "handler",
+      memorySize: 400, // Increase memory if needed
+      timeout: cdk.Duration.seconds(120), // Increase timeout if needed
       bundling: {
         minify: true,
         sourceMap: false,
       },
-      memorySize: 400, // Increase memory if needed
-      timeout: cdk.Duration.seconds(120), // Increase timeout if needed
-      environment: {
-        CLIENT_ID: userPoolClient.userPoolClientId,
-      },
+      environment,
+      tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_119_0,
+    });
+  }
+
+  private grantCognitoPermissions(lambdaFunction: lambda.IFunction, userPool: cognito.IUserPool, additionalActions: string[] = []) {
+    const actions = [
+      "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminSetUserPassword",
+      "cognito-idp:AdminUpdateUserAttributes",
+      ...additionalActions,
+    ];
+
+    const policy = new iam.PolicyStatement({
+      actions,
+      resources: [userPool.userPoolArn],
     });
 
-    // Define IAM policy for the Register Lambda
-    const registerPolicy = new iam.PolicyStatement({
-      actions: [
-        "cognito-idp:AdminCreateUser",
-        "cognito-idp:AdminSetUserPassword",
-        "cognito-idp:AdminUpdateUserAttributes",
-      ],
-      resources: [userPool.userPoolArn], // Grant access to User Pool
-    });
+    lambdaFunction.addToRolePolicy(policy);
+  }
 
-    // Define IAM policy for the Login Lambda
-    const loginPolicy = new iam.PolicyStatement({
-      actions: ["cognito-idp:InitiateAuth"],
-      resources: [
-        `arn:aws:cognito-idp:${cdk.Stack.of(this).region}:${
-          cdk.Stack.of(this).account
-        }:userpool/${userPool.userPoolId}`,
-      ], // Specific User Pool ARN
-    });
-
-    // Attach policies to Lambda functions
-    registerLambda.addToRolePolicy(registerPolicy);
-    loginLambda.addToRolePolicy(loginPolicy);
-
-    // Define API Gateway
-    const api = new apigateway.RestApi(this, "Api", {
+  private createApiGateway() {
+    return new apigateway.RestApi(this, "Api", {
       restApiName: "User Service",
       description: "This service handles user registration and login.",
     });
+  }
 
-    // Define request model for validation
-    const requestModel = new apigateway.Model(this, "RegisterRequestModel", {
-      modelName: "RegisterRequestModel",
+  private createRequestValidator(api: apigateway.IRestApi) {
+    return new apigateway.RequestValidator(this, "RequestValidator", {
+      restApi: api,
+      validateRequestBody: true,
+      validateRequestParameters: false,
+    });
+  }
+
+  private createRequestModel(api: apigateway.IRestApi, modelName: string, properties: { [key: string]: any }) {
+    return new apigateway.Model(this, modelName, {
+      modelName,
       restApi: api,
       schema: {
         type: apigateway.JsonSchemaType.OBJECT,
         properties: {
-          email: {
-            type: apigateway.JsonSchemaType.STRING,
-          },
-          username: {
-            type: apigateway.JsonSchemaType.STRING,
-          },
-          password: {
-            type: apigateway.JsonSchemaType.STRING,
-          },
+          ...properties,
         },
-        required: ["email", "username", "password"],
+        required: Object.keys(properties),
       },
     });
+  }
 
-    // Define request model for login validation
-    const loginRequestModel = new apigateway.Model(this, "LoginRequestModel", {
-      modelName: "LoginRequestModel",
-      restApi: api,
-      schema: {
-        type: apigateway.JsonSchemaType.OBJECT,
-        properties: {
-          username: { type: apigateway.JsonSchemaType.STRING },
-          password: { type: apigateway.JsonSchemaType.STRING },
-        },
-        required: ["username", "password"],
-      },
-    });
-
-    // Enable request validation
-    const requestValidator = new apigateway.RequestValidator(
-      this,
-      "RequestValidator",
-      {
-        restApi: api,
-        validateRequestBody: true,
-        validateRequestParameters: false,
-      }
-    );
-
-    // Create Lambda integrations
-    const lambdaIntegrationRegister = new apigateway.LambdaIntegration(
-      registerLambda
-    );
-    const lambdaIntegrationLogin = new apigateway.LambdaIntegration(
-      loginLambda
-    );
-
-    // Define CORS response headers for localhost
-    const corsOptions = {
-      allowOrigins: apigateway.Cors.ALL_ORIGINS, // Adjust to specific origins if needed
-      allowMethods: apigateway.Cors.ALL_METHODS, // Allows all HTTP methods including OPTIONS
-      allowHeaders: [
-        "Content-Type",
-        "X-Amz-Date",
-        "Authorization",
-        "X-Api-Key", // You can add more headers if necessary
-      ],
-      allowCredentials: true, // Optional: allow credentials (cookies, etc.)
-    };
-
-    api.root.addCorsPreflight(corsOptions);
-
-    // Define OPTIONS method for CORS on /login and /register
+  private createApiMethods(api: apigateway.IRestApi, registerLambda: lambda.IFunction, loginLambda: lambda.IFunction, 
+                            requestValidator: apigateway.IRequestValidator, registerRequestModel: apigateway.IModel, 
+                            loginRequestModel: apigateway.IModel) {
     const loginResource = api.root.addResource("login");
-    loginResource.addMethod("POST", lambdaIntegrationLogin, {
-      requestValidator: requestValidator,
-      requestModels: {
-        "application/json": loginRequestModel,
-      },
+    this.addCorsToResource(loginResource);
+    loginResource.addMethod("POST", new apigateway.LambdaIntegration(loginLambda), {
+      requestValidator,
+      requestModels: { "application/json": loginRequestModel },
     });
 
     const registerResource = api.root.addResource("register");
-    registerResource.addMethod("POST", lambdaIntegrationRegister, {
-      requestValidator: requestValidator,
-      requestModels: {
-        "application/json": requestModel,
-      },
+    this.addCorsToResource(registerResource);
+    registerResource.addMethod("POST", new apigateway.LambdaIntegration(registerLambda), {
+      requestValidator,
+      requestModels: { "application/json": registerRequestModel },
+    });
+  }
+
+  private addCorsToResource(resource: apigateway.IResource) {
+    resource.addCorsPreflight({
+      allowOrigins: apigateway.Cors.ALL_ORIGINS,
+      allowMethods: apigateway.Cors.ALL_METHODS,
+    });
+  }
+
+  private createDynamoDBTable() {
+    return new dynamodb.Table(this, "DevLinksTable", {
+      partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+  }
+
+  private createS3Bucket() {
+    return new s3.Bucket(this, "DevLinksBucket", {
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true, // Only for dev/test environments
+    });
+  }
+
+  private grantTableAndBucketPermissions(lambdaFunction: lambda.IFunction, table: dynamodb.ITable, bucket: s3.IBucket) {
+    table.grantReadWriteData(lambdaFunction);
+    bucket.grantReadWrite(lambdaFunction);
+  }
+
+  private grantTablePermissions(lambdaFunction: lambda.IFunction, table: dynamodb.ITable) {
+    table.grantReadData(lambdaFunction);
+  }
+
+  private addLinkResourceMethods(resource: apigateway.IResource, createLinkLambda: lambda.IFunction, getLinkLambda: lambda.IFunction, userPool: cognito.IUserPool) {
+    resource.addMethod("POST", new apigateway.LambdaIntegration(createLinkLambda), {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, "CognitoAuthorizer", {
+        cognitoUserPools: [userPool],
+      }),
     });
 
-    // Add CORS to both resources
-    loginResource.addCorsPreflight(corsOptions);
-    registerResource.addCorsPreflight(corsOptions);
-
-    // Custom domain mapping
-    new apigateway.BasePathMapping(this, "BasePathMapping", {
-      domainName: customDomain,
-      restApi: api,
-      stage: api.deploymentStage,
-    });
-
-    //DynamoDb
-    const devlinksTable = new dynamodb.Table(this, "DevLinksTable", {
-      partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING }, // Changed from email to userId
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST, // Pay per request model
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test, use RETAIN for production
-    });
-
-      // Create an S3 bucket with public read access
-      const s3Bucket = new s3.Bucket(this, "PublicS3Bucket", {
-        bucketName: "devlinks098109238091",
-        publicReadAccess: true, // Enable public read access
-        removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev/test environments
-        autoDeleteObjects: true, // Allow objects to be automatically deleted
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS, // Only block ACLs, not object-level public access
-      });
-    
-
-    const createLinkLambda = new lambdaNodejs.NodejsFunction(
-      this,
-      "CreateLinkFunction",
-      {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        entry: "./lambdas/links/createLink.ts",
-        functionName: "CreateLink",
-        handler: "handler",
-        memorySize: 400,
-        timeout: cdk.Duration.seconds(120),
-        environment: {
-          USER_POOL_ID: userPool.userPoolId,
-          DYNAMO_TABLE_NAME: devlinksTable.tableName,
-          S3_BUCKET_NAME: s3Bucket.bucketName, // Pass the bucket name to Lambda
-        },
-        bundling: {
-          minify: true,
-          sourceMap: false,
-        },
-      }
-    );
-
-    devlinksTable.grantReadWriteData(createLinkLambda)
-
-
-     // Grant permissions for the Lambda function to create and delete objects in the S3 bucket
-     s3Bucket.grantPut(createLinkLambda);  // Allow Lambda to put objects
-     s3Bucket.grantDelete(createLinkLambda);  // Allow Lambda to delete objects
- 
-     // Define the S3 bucket policy to allow public read access to objects
-     s3Bucket.addToResourcePolicy(
-       new iam.PolicyStatement({
-         actions: ["s3:GetObject"],
-         resources: [`${s3Bucket.bucketArn}/*`], // Grant public read access to all objects in the bucket
-         principals: [new iam.AnyPrincipal()],  // Anyone can read
-       })
-     );
- 
-
-    const getLinkLambda = new lambdaNodejs.NodejsFunction(
-      this,
-      "GetLinkFunction",
-      {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        entry: "./lambdas/links/getLink.ts",
-        functionName: "GetLink",
-        handler: "handler",
-        memorySize: 400,
-        timeout: cdk.Duration.seconds(120),
-        environment: {
-          DYNAMO_TABLE_NAME: devlinksTable.tableName,
-        },
-        bundling: {
-          minify: true,
-          sourceMap: false,
-        },
-      }
-    );
-
-    devlinksTable.grantReadData(getLinkLambda)
-
-    const createLinkResource = api.root.addResource("link");
-    createLinkResource.addCorsPreflight(corsOptions); // Enable CORS for /link
-    createLinkResource.addMethod(
-      "POST",
-      new apigateway.LambdaIntegration(createLinkLambda),
-      {
-        authorizationType: apigateway.AuthorizationType.COGNITO,
-        authorizer: new apigateway.CognitoUserPoolsAuthorizer(
-          this,
-          "MyCognitoAuthorizer",
-          {
-            cognitoUserPools: [userPool],
-          }
-        ),
-      }
-    );
-
-    createLinkResource.addMethod(
-      "GET",
-      new apigateway.LambdaIntegration(getLinkLambda)
-    );
-
-    const privateGetLinkLambda = new lambdaNodejs.NodejsFunction(                                                              
-      this,                                                                                                                    
-      "PrivateGetLinkFunction",                                                                                                
-      {                                                                                                                        
-        runtime: lambda.Runtime.NODEJS_20_X,                                                                                   
-        entry: "./lambdas/links/privateGetLink.ts",                                                                             
-        functionName: "PrivateGetLink",                                                                                        
-        handler: "handler",                                                                                                    
-        memorySize: 400,                                                                                                       
-        timeout: cdk.Duration.seconds(120),                                                                                    
-        environment: {                                                                                                         
-          DYNAMO_TABLE_NAME: devlinksTable.tableName,                                                                          
-        },                                                                                                                     
-        bundling: {                                                                                                            
-          minify: true,                                                                                                        
-          sourceMap: false,                                                                                                    
-        },                                                                                                                     
-      }                                                                                                                        
-    );                                                                                                                         
-                                                                                                                               
-    devlinksTable.grantReadData(privateGetLinkLambda);  
-    
-    const privateGetLinkResource = api.root.addResource("private-link");                                                       
-    privateGetLinkResource.addCorsPreflight(corsOptions); // Enable CORS for /private-link
-    privateGetLinkResource.addMethod(                                                                                          
-      "GET",                                                                                                                   
-      new apigateway.LambdaIntegration(privateGetLinkLambda),                                                                  
-      {                                                                                                                        
-        authorizationType: apigateway.AuthorizationType.COGNITO,                                                               
-        authorizer: new apigateway.CognitoUserPoolsAuthorizer(                                                                 
-          this,                                                                                                                
-          "PrivateCognitoAuthorizer",                                                                                          
-          {                                                                                                                    
-            cognitoUserPools: [userPool],                                                                                      
-          }                                                                                                                    
-        ),                                                                                                                     
-      }                                                                                                                        
-    ); 
-                                                           
+    resource.addMethod("GET", new apigateway.LambdaIntegration(getLinkLambda));
   }
 }

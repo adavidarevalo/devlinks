@@ -30,7 +30,7 @@ export const handler = async (
           firstName: "",
           lastName: "",
           email: "",
-          avatar: undefined,
+          avatar: null,
           links: [],
         }),
       };

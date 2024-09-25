@@ -9,7 +9,7 @@ class LinkService {
   }
 
   async getSecureLink() {
-    const link = await this.APIv1.http.get("private-link");
+    const link = await this.APIv1.http.get("privateLink");
 
     return link.data;
   }
