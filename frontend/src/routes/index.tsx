@@ -6,18 +6,20 @@ import LinksPage from "../pages/links";
 import PreviewCardPage from "../pages/preview";
 import PreviewDetailsPage from "../pages/previewDetails";
 import NotFound from "../pages/notFound";
+import HomePage from "../pages/home";
 
 export default function MainRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+      <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/link/:id" element={<PreviewDetailsPage />} />
         <Route path="/" element={<LinksProvider />}>
           <Route path="/links" element={<LinksPage />} />
           <Route path={"/preview"} element={<PreviewCardPage />} />
         </Route>
+        <Route path="/links/:id" element={<PreviewDetailsPage />} />
         <Route path="/*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
