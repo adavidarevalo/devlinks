@@ -1,6 +1,7 @@
-import Axios, { CancelTokenSource, AxiosStatic, AxiosInstance, AxiosRequestConfig } from 'axios';
+import Axios, { CancelTokenSource, AxiosStatic, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { config } from '../config';
 import { deleteStorage, getStorage } from '../localstorage';
+import _ from 'lodash';
 
 export interface AxiosRequestConfigWithExtra extends AxiosRequestConfig {
     extra?: {
@@ -36,9 +37,6 @@ class HttpService implements IHttpInstance {
         this.source = source;
         this.http = http;
         this.externalHttp = Axios;
-        
-        // Add the interceptor
-        this.setupInterceptors();
     }
 
     private initAxios() {
@@ -47,7 +45,6 @@ class HttpService implements IHttpInstance {
         const http = Axios.create({
             baseURL,
             cancelToken: source.token,
-            // Initial headers can be empty or set here
             headers: {
                 "content-type": "application/json",
             }
@@ -59,32 +56,31 @@ class HttpService implements IHttpInstance {
             return config;
         });
 
-        return { source, http };
-    }
-
-    private setupInterceptors() {
-        this.http.interceptors.response.use(
-            response => {
-                // If the response is successful, just return it
-                return response;
+        // Add a response interceptor to handle all responses
+        http.interceptors.response.use(
+            (response: AxiosResponse) => {
+                // Middleware to process the response
+                
+                return response; // Pass the response back
             },
-            error => {
-                // If there is an error, check the response status
-                if (error.response) {
-                    const status = error.response.status;
-                    if (status === 401 || status === 403) {
-                        // Redirect to /login when status is 401 or 403
-                        deleteStorage("IdToken");
-                        deleteStorage("RefreshToken");
-                        deleteStorage("AccessToken");
+            (error) => {
+                // Handle response errors here
 
-                        window.location.href = '/login';
-                    }
+                const status = _.get(error, "response.status")
+
+                if (status === 401 || status === 403) {
+                    deleteStorage("IdToken")
+                    deleteStorage("RefreshToken")
+                    deleteStorage("AccessToken")
+
+                    window.location.href = "/login"
                 }
-                // Reject the error if it's not 401 or 403
+
                 return Promise.reject(error);
             }
         );
+
+        return { source, http };
     }
 
     cancel(): void {

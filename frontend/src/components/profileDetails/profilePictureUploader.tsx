@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
-import { IoCameraOutline, IoTrashOutline } from "react-icons/io5"; // {{ edit_1 }}
+import { IoCameraOutline, IoTrashOutline } from "react-icons/io5"; 
 import { useLinks } from '../context/link';
 
 const ProfilePictureUploader: React.FC = () => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [hover, setHover] = useState<boolean>(false); // {{ edit_2 }}
+  const [hover, setHover] = useState<boolean>(false);
 
-  const {setValue} = useLinks()
-
-  
+  const { setValue, setAvatar, avatar } = useLinks();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -24,7 +21,6 @@ const ProfilePictureUploader: React.FC = () => {
       // Validate image dimensions
       const img = new Image();
       img.onload = () => {
-        // Proceed with the existing logic
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64String = reader.result?.toString();
@@ -34,26 +30,26 @@ const ProfilePictureUploader: React.FC = () => {
               content: base64String.replace(/^data:image\/[a-z]+;base64,/, ""), // Image content without base64 prefix
               contentType: file.type,
             };
-
-            setValue("avatar", jsonPayload)
+            setValue("avatar", jsonPayload);
           }
         };
         reader.readAsDataURL(file);
         const url = URL.createObjectURL(file);
-        setImageUrl(url);
+        setAvatar(url);
       };
       img.src = URL.createObjectURL(file); // Load image to check dimensions
     }
   };
 
-  const handleDeleteImage = () => { // {{ edit_3 }}
-    setImageUrl(null);
-    setValue("avatar", undefined)
+  const handleDeleteImage = () => {
+    setAvatar(null);
+    setValue("avatar", undefined);
   };
 
   return (
     <Box
       display="flex"
+      flexDirection={{ xs: 'column', sm: 'row' }} // Adjust layout for mobile
       alignItems="center"
       justifyContent="space-between"
       padding={2}
@@ -65,10 +61,11 @@ const ProfilePictureUploader: React.FC = () => {
     >
       {/* Profile Picture Text */}
       <Typography 
-      variant="body1" 
-      fontWeight={400}
-      style={{ color: "#737373"}}
-      color="textSecondary">
+        variant="body1" 
+        fontWeight={400}
+        color="textSecondary"
+        sx={{ textAlign: { xs: 'center', sm: 'left' }, marginBottom: { xs: 1, sm: 0 } }}
+      >
         Profile picture
       </Typography>
 
@@ -79,27 +76,27 @@ const ProfilePictureUploader: React.FC = () => {
         justifyContent="center"
         flexDirection="column"
         bgcolor="#F3F0FF"
-        width={200}
-        height={200}
+        width={{ xs: '100%', sm: 200 }} // Full width on mobile
+        height={{ xs: 200, sm: 200 }}
         borderRadius={2}
         textAlign="center"
         sx={{ 
           border: '2px dashed #A3A3A3',
-          backgroundImage: imageUrl ? `url(${imageUrl})` : 'none',
+          backgroundImage: avatar ? `url(${avatar})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          position: 'relative', // {{ edit_4 }}
-          '&:hover': { // {{ edit_5 }}
+          position: 'relative',
+          '&:hover': {
             cursor: 'pointer',
           }
         }}
-        onMouseEnter={() => setHover(true)} // {{ edit_6 }}
-        onMouseLeave={() => setHover(false)} // {{ edit_7 }}
+        onMouseEnter={() => setHover(true)} 
+        onMouseLeave={() => setHover(false)} 
       >
-        {imageUrl && hover && ( // {{ edit_8 }}
+        {avatar && hover && (
           <IconButton 
             onClick={handleDeleteImage} 
-            sx={{ position: 'absolute', top: 10, right: 10 }} // {{ edit_9 }}
+            sx={{ position: 'absolute', top: 10, right: 10 }} 
             color="secondary"
           >
             <IoTrashOutline />
@@ -124,12 +121,10 @@ const ProfilePictureUploader: React.FC = () => {
 
       {/* Image size information */}
       <Typography 
-      variant="body2" 
-      color="textSecondary" 
-      sx={{ marginLeft: 2 }}
-      fontSize={".75rem"}
-      style={{ color: "#737373"}}
-      textAlign={"start"}
+        variant="body2" 
+        color="textSecondary" 
+        sx={{ marginLeft: { sm: 2 }, textAlign: { xs: 'center', sm: 'start' }, fontSize: { xs: '0.75rem', sm: '1rem' } }} // Responsive text alignment and size
+        style={{ color: "#737373" }}
       >
         Image must be below 1024x1024px. Use PNG or JPG format.
       </Typography>

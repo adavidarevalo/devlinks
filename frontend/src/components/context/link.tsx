@@ -9,6 +9,7 @@ import {
   UseFieldArrayMove,
   UseFieldArrayRemove,
   useForm,
+  UseFormGetValues,
   UseFormHandleSubmit,
   UseFormSetValue,
 } from "react-hook-form";
@@ -19,8 +20,9 @@ import { addMessage } from "../../store/slices/globalSlice";
 import _ from "lodash";
 import { Outlet } from 'react-router-dom';
 import LinkService from "./../../services/links"
+import LoadingView from "../loadingView";
 
-interface Link {
+export interface Link {
   platform: string;
   link: string;
 }
@@ -55,7 +57,10 @@ const LinksContext = createContext<{
   fields: FieldArrayWithId<LinksState, "links", "id">[];
   setView: React.Dispatch<React.SetStateAction<"links" | "profile">>;
   view: "links" | "profile";
-  setValue: UseFormSetValue<LinksState>
+  setValue: UseFormSetValue<LinksState>,
+  getValues: UseFormGetValues<LinksState>,
+  setAvatar: React.Dispatch<React.SetStateAction<string>>
+  avatar: string
 }>({
   control: null,
   errors: {},
@@ -66,12 +71,17 @@ const LinksContext = createContext<{
   fields: [],
   setView: () => {},
   view: "links",
-  setValue: () => {}
+  setValue: null,
+  getValues: null,
+  setAvatar: null,
+  avatar: null
 });
 
 
 export const LinksProvider = () => {
   const [view, setView] = useState<"links" | "profile">("links");
+  const [avatar, setAvatar] = useState<string>(null)
+  const [loading, setLoading] = useState(false)
   const dispatch = useDispatch<AppDispatch>();
 
   const {
@@ -79,12 +89,12 @@ export const LinksProvider = () => {
     handleSubmit,
     formState: { errors },
     setValue,
-    reset
+    reset,
+    getValues
   } = useForm<LinksState>({
     resolver: yupResolver(linkFormSchema) as any,
     defaultValues: initialState,
   });
-
   
   useEffect(() => {
     if (_.get(errors, "links.root")) {
@@ -102,7 +112,10 @@ export const LinksProvider = () => {
 
   const getData = async () => {
     try {
+      setLoading(true)
       const linkData = await LinkService.getSecureLink();
+
+      if (linkData.avatar) setAvatar(linkData.avatar)
       
       reset(linkData); 
     } catch (error) {
@@ -118,6 +131,8 @@ export const LinksProvider = () => {
           ),
         })
       );
+    } finally {
+      setLoading(false)
     }
   }
   
@@ -139,10 +154,13 @@ export const LinksProvider = () => {
         move,
         view,
         setView,
-        setValue
+        setValue,
+        getValues,
+        setAvatar,
+        avatar
       }}
     >
-      <Outlet />
+      {loading ? <LoadingView/> : <Outlet />}
       </LinksContext.Provider>
   );
 };

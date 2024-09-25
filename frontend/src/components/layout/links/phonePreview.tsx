@@ -7,7 +7,7 @@ import { useWatch } from "react-hook-form";
 import _ from "lodash";
 
 export default function PhonePreview() {
-  const { control, fields, move } = useLinks();
+  const { control, fields, move, avatar } = useLinks();
 
   const links = useWatch({ control: control!, name: "links" });
   const firstName = useWatch({ control: control!, name: "firstName" });
@@ -35,8 +35,8 @@ export default function PhonePreview() {
         height: "calc(100vh - 100px)",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
         minHeight: "710px",
-        position: "sticky", 
-        top: 0
+        position: "sticky",
+        top: 0,
       }}
       display={"flex"}
       justifyContent={"center"}
@@ -44,6 +44,27 @@ export default function PhonePreview() {
     >
       <Box position={"relative"}>
         <Phone />
+        {avatar && (
+          <Box
+            position={"absolute"}
+            top={"64px"}
+            left={"111px"}
+            width="95px" // Set width to match height for a perfect circle
+            height="95px" // Ensure height is fixed to 200px
+          >
+            <img
+              src={avatar}
+              alt={"Profile photo"}
+              loading="lazy"
+              style={{
+                height: "100%", // Make image fill the height of the container
+                width: "100%", // Make image fill the width of the container
+                objectFit: "cover", // Ensure the image fills the box without stretching
+                borderRadius: "50%", // Make it a perfect circle
+              }}
+            />
+          </Box>
+        )}
         {firstName || lastName ? (
           <Box
             position={"absolute"}
@@ -100,12 +121,13 @@ export default function PhonePreview() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            style={{...getItemStyle(
-                              snapshot.isDragging,
-                              provided.draggableProps.style
-                            ),
-                            backgroundColor: platform?.color,
-                          }}
+                            style={{
+                              ...getItemStyle(
+                                snapshot.isDragging,
+                                provided.draggableProps.style
+                              ),
+                              backgroundColor: platform?.color,
+                            }}
                             sx={{
                               width: "235px",
                               height: "43px",
@@ -121,6 +143,7 @@ export default function PhonePreview() {
                             {platform && <platform.icon color={"white"} />}
                             <Box marginLeft={"5px"}>{platform?.name}</Box>
                           </Box>
+                        
                         )}
                       </Draggable>
                     );

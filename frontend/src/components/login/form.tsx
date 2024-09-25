@@ -4,7 +4,7 @@ import { loginSchema } from "./schema";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Box, Typography } from "@mui/material";
 import FormInput from "../form/input";
-import EmailIcon from "../../assets/EmailIcon";
+import { MdOutlineEmail } from "react-icons/md";
 import LockIcon from "../../assets/platforms/LockIcon";
 import SubmitButton from "../form/submitButton";
 import { Link, useNavigate } from "react-router-dom";
@@ -76,7 +76,7 @@ export default function LoginForm() {
         name="email"
         control={control}
         errors={errors}
-        Icon={<EmailIcon />}
+        Icon={<MdOutlineEmail />}
         label={"Email address"}
       />
 
