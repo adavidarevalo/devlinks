@@ -22,14 +22,18 @@ export default function CardContentView({avatarUrl, name, email, links}: CardCon
           boxShadow: 3,
           textAlign: 'center',
           backgroundColor: 'white',
+          minHeight: "300px"
         }}
-        // zIndex={10}
+        
       >
+        {avatarUrl && (
+
         <Avatar
           src={avatarUrl || "https://via.placeholder.com/150"}
           alt="Profile Picture"
           sx={{ width: 100, height: 100, mx: 'auto', border: '3px solid #6c3bff' }}
         />
+        )}
         <Typography variant="h6" component="div" sx={{ mt: 2 }}>
           {name || ""}
         </Typography>

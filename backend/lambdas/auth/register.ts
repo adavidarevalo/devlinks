@@ -45,11 +45,6 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*", // Or specific origins
-        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key",
-        "Access-Control-Allow-Methods": "OPTIONS,POST,GET", // Or the methods you support
-      },
       body: JSON.stringify({ message: 'User registered successfully and email verified.' })
     };
   } catch (error: any) {

@@ -1,9 +1,14 @@
 import { Box, Button } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useNavigate } from 'react-router-dom';
+import { useLinks } from '../context/link';
 
 export default function PreviewHeader() {
     const navigate = useNavigate()
+    const { getValues } = useLinks();
+
+    const links = getValues("links") || []
+
   return (
     <Box
       sx={{
@@ -50,6 +55,7 @@ export default function PreviewHeader() {
               textTransform: 'none',
               fontSize: '16px',
             }}
+            disabled={links.length === 0}
           >
             Share Link
           </Button>

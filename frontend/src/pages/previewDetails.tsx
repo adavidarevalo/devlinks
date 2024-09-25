@@ -1,16 +1,12 @@
-import PreviewHeader from "../components/preview/header";
 import CardContentView from "../components/preview/cardContent";
 import { useLinks } from "../components/context/link";
 import PreviewLayout from "../components/layout/preview";
 
-const PreviewCardPage = () => {
+const PreviewDetailsPage = () => {
   const { avatar, getValues } = useLinks();
 
   return (
     <PreviewLayout>
-      <PreviewHeader />
-
-      {/* Profile Card */}
       <CardContentView
         avatarUrl={avatar}
         name={`${getValues("firstName")} ${getValues("lastName")}`}
@@ -21,4 +17,4 @@ const PreviewCardPage = () => {
   );
 };
 
-export default PreviewCardPage;
+export default PreviewDetailsPage;

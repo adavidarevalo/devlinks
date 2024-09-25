@@ -41,7 +41,6 @@ const FormInput: React.FC<FormInputProps> = ({
           disabled={disabled}
           label={label}
           autoComplete={autoComplete ?? name}
-          autoFocus
           placeholder={placeholder ?? `e.g. ${label}`}
           error={!!_.get(errors, `[${name}]`)}
           helperText={_.get(errors, `[${name}].message`)}
