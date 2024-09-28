@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, ReactElement, useContext, useEffect, useState } from "react";
 import {
   Control,
   FieldArrayWithId,
@@ -83,8 +83,11 @@ const LinksContext = createContext<{
   linkLoading: false
 });
 
+interface LinksProviderProps {
+  children?: ReactElement
+}
 
-export const LinksProvider = () => {
+export const LinksProvider = ({children}: LinksProviderProps) => {
   const [view, setView] = useState<"links" | "profile">("links");
   const [avatar, setAvatar] = useState<string>(null)
   const [loading, setLoading] = useState(false)
@@ -173,6 +176,8 @@ export const LinksProvider = () => {
     }
   };
 
+  const result = children ?? <Outlet/>
+
 
   return (
     <LinksContext.Provider
@@ -194,7 +199,7 @@ export const LinksProvider = () => {
         onLinkSubmit
       }}
     >
-      {loading ? <LoadingView/> : <Outlet />}
+      {loading ? <LoadingView/> : result}
       </LinksContext.Provider>
   );
 };
