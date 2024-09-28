@@ -20,6 +20,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
   };
 
   try {
+    // Step 1: Create the user
     await cognito.adminCreateUser(createUserParams).promise();
 
     // Step 2: Set a permanent password for the user
@@ -32,7 +33,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     await cognito.adminSetUserPassword(setPasswordParams).promise();
 
-    // Step 3: Trigger email verification manually
+    // Step 3: Mark email as verified
     const adminUpdateUserAttributesParams = {
       UserPoolId: process.env.USER_POOL_ID!,
       Username: username,
@@ -43,9 +44,32 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     await cognito.adminUpdateUserAttributes(adminUpdateUserAttributesParams).promise();
 
+    // Step 4: Authenticate the user to get tokens
+    const authParams = {
+      AuthFlow: 'ADMIN_NO_SRP_AUTH',
+      UserPoolId: process.env.USER_POOL_ID!,
+      ClientId: process.env.CLIENT_ID!,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password
+      }
+    };
+
+    const authResponse = await cognito.adminInitiateAuth(authParams).promise();
+
+    // Return tokens in the response
+    const tokens = authResponse.AuthenticationResult;
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'User registered successfully and email verified.' })
+      body: JSON.stringify({
+        message: 'User registered successfully and email verified.',
+        tokens: {
+          accessToken: tokens?.AccessToken,
+          idToken: tokens?.IdToken,
+          refreshToken: tokens?.RefreshToken
+        }
+      })
     };
   } catch (error: any) {
     console.error("Error processing user registration:", error);

@@ -2,7 +2,6 @@ import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import DevlinksLogoLg from '../assets/DevlinksLogoLg';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import useAuthRedirect from '../hook/useAuthRedirect';
 import { motion } from "framer-motion";
 
 export default function HomePage() {
@@ -27,8 +26,6 @@ export default function HomePage() {
       document.body.style.overflow = ''; // Reset overflow on unmount
     };
   }, []);
-
-  useAuthRedirect()
 
   const pageVariants = {
     initial: { opacity: 0, y: -100 },

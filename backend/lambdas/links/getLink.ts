@@ -7,6 +7,8 @@ AWSXRay.captureAWS(require('aws-sdk'));
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
+const s3 = new AWS.S3();
+
 export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
   try {
     const queryStringParameters = event.queryStringParameters || {};
@@ -36,6 +38,17 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
         statusCode: 404,
         body: JSON.stringify({ message: 'Item not found' }),
       };
+    }
+
+    const userItem = result.Items[0];
+    if (userItem.avatar && typeof userItem.avatar === 'string') {
+      const avatarKey = userItem.avatar;
+      const signedUrl = s3.getSignedUrl('getObject', {
+        Bucket: process.env.S3_BUCKET_NAME!,
+        Key: avatarKey,
+        Expires: 600, // Expires in 10 minutes
+      });
+      userItem.avatar = signedUrl; // Assign the signed URL back to the avatar property
     }
 
     return {

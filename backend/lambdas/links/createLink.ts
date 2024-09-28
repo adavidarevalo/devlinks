@@ -36,14 +36,19 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
     }
 
     // Check if the item already exists in DynamoDB
-    const existingItem = await dynamodb
-      .get({
-        TableName: process.env.DYNAMO_TABLE_NAME!,
-        Key: { userId },
-      })
-      .promise();
+      const existingItem = await dynamodb
+    .query({
+      TableName: process.env.DYNAMO_TABLE_NAME!,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+      },
+    })
+    .promise();
 
-    let avatarUrl = existingItem.Item ? existingItem.Item.avatar : '';
+    const id = _.get(existingItem, "Items[0].id")
+
+    let avatarUrl = _.get(existingItem, "Items[0].avatar", "");
     const bucketName = process.env.S3_BUCKET_NAME;
     if (!bucketName) {
       throw new Error('S3 bucket name is not set in environment variables.');
@@ -53,8 +58,8 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       const s3Key = `${userId}/${nanoid()}${extname(avatarFile.filename)}`;
 
       // Delete existing avatar if present
-      if (existingItem.Item && existingItem.Item.avatar) {
-        const oldAvatarKey = existingItem.Item.avatar.split('.com/')[1];
+      if (_.get(existingItem, "Items[0].avatar", "")) {
+        const oldAvatarKey = _.get(existingItem, "Items[0].avatar", "")
         await s3
           .deleteObject({
             Bucket: bucketName,
@@ -64,14 +69,14 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       }
 
       // Upload new avatar to S3
-      const uploadResult = await s3.upload({
+      await s3.upload({
         Bucket: bucketName,
         Key: s3Key,
         Body: avatarFile.content, // Buffer from Base64
         ContentType: avatarFile.contentType,
       }).promise();
 
-      avatarUrl = uploadResult.Location;
+      avatarUrl = s3Key;
     }
 
     const item = {
@@ -81,10 +86,10 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
       lastName,
       links,
       email,
-      id: existingItem.Item ? existingItem.Item.id : nanoid(),
+      id: id ?? nanoid(),
     };
 
-    if (!existingItem.Item) {
+    if (!id) {
       // Create new item in DynamoDB
       await dynamodb
         .put({

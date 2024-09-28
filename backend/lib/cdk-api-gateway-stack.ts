@@ -22,111 +22,192 @@ export class CdkApiGatewayStack extends cdk.Stack {
     this.createApiGatewayAliasRecord(customDomain, hostedZone);
     const userPool = this.createCognitoUserPool();
     const userPoolClient = this.createCognitoUserPoolClient(userPool);
-    
-    const registerLambda = this.createLambdaFunction("RegisterFunction", "./lambdas/auth/register.ts", {
-      USER_POOL_ID: userPool.userPoolId,
-      CLIENT_ID: userPoolClient.userPoolClientId,
-    });
-
-    const loginLambda = this.createLambdaFunction("LoginFunction", "./lambdas/auth/login.ts", {
-      CLIENT_ID: userPoolClient.userPoolClientId,
-    });
-
-    this.grantCognitoPermissions(registerLambda, userPool);
-    this.grantCognitoPermissions(loginLambda, userPool, ["cognito-idp:InitiateAuth"]);
 
     const api = this.createApiGateway();
 
     const requestValidator = this.createRequestValidator(api);
-    const registerRequestModel = this.createRequestModel(api, "RegisterRequestModel", {
-      email: { type: apigateway.JsonSchemaType.STRING },
-      username: { type: apigateway.JsonSchemaType.STRING },
-      password: { type: apigateway.JsonSchemaType.STRING },
-    });
+    const registerRequestModel = this.createRequestModel(
+      api,
+      "RegisterRequestModel",
+      {
+        email: { type: apigateway.JsonSchemaType.STRING },
+        username: { type: apigateway.JsonSchemaType.STRING },
+        password: { type: apigateway.JsonSchemaType.STRING },
+      }
+    );
 
-    const loginRequestModel = this.createRequestModel(api, "LoginRequestModel", {
-      username: { type: apigateway.JsonSchemaType.STRING },
-      password: { type: apigateway.JsonSchemaType.STRING },
-    });
-
-    this.createApiMethods(api, registerLambda, loginLambda, requestValidator, registerRequestModel, loginRequestModel);
+    const loginRequestModel = this.createRequestModel(
+      api,
+      "LoginRequestModel",
+      {
+        username: { type: apigateway.JsonSchemaType.STRING },
+        password: { type: apigateway.JsonSchemaType.STRING },
+      }
+    );
 
     const devlinksTable = this.createDynamoDBTable();
     const s3Bucket = this.createS3Bucket();
 
-    const createLinkLambda = this.createLambdaFunction("CreateLinkFunction", "./lambdas/links/createLink.ts", {
-      USER_POOL_ID: userPool.userPoolId,
-      DYNAMO_TABLE_NAME: devlinksTable.tableName,
-      S3_BUCKET_NAME: s3Bucket.bucketName,
-    });
+    const createLinkLambda = this.createLambdaFunction(
+      "CreateLinkFunction",
+      "./lambdas/links/createLink.ts",
+      {
+        USER_POOL_ID: userPool.userPoolId,
+        DYNAMO_TABLE_NAME: devlinksTable.tableName,
+        S3_BUCKET_NAME: s3Bucket.bucketName,
+      },
+      ['sharp']
+    );
 
-    this.grantTableAndBucketPermissions(createLinkLambda, devlinksTable, s3Bucket);
+    this.grantTableAndBucketPermissions(
+      createLinkLambda,
+      devlinksTable,
+      s3Bucket
+    );
 
-    const getLinkLambda = this.createLambdaFunction("GetLinkFunction", "./lambdas/links/getLink.ts", {
-      DYNAMO_TABLE_NAME: devlinksTable.tableName,
-    });
+    const registerLambda = this.createLambdaFunction(
+      "RegisterFunction",
+      "./lambdas/auth/register.ts",
+      {
+        USER_POOL_ID: userPool.userPoolId,
+        CLIENT_ID: userPoolClient.userPoolClientId,
+        S3_BUCKET_NAME: s3Bucket.bucketName,
+      }
+    );
+
+    const loginLambda = this.createLambdaFunction(
+      "LoginFunction",
+      "./lambdas/auth/login.ts",
+      {
+        CLIENT_ID: userPoolClient.userPoolClientId,
+      }
+    );
+
+    this.createApiMethods(
+      api,
+      registerLambda,
+      loginLambda,
+      requestValidator,
+      registerRequestModel,
+      loginRequestModel
+    );
+
+    this.grantCognitoPermissions(registerLambda, userPool);
+    this.grantCognitoPermissions(loginLambda, userPool, [
+      "cognito-idp:InitiateAuth",
+    ]);
+
+    const getLinkLambda = this.createLambdaFunction(
+      "GetLinkFunction",
+      "./lambdas/links/getLink.ts",
+      {
+        DYNAMO_TABLE_NAME: devlinksTable.tableName,
+        S3_BUCKET_NAME: s3Bucket.bucketName,
+      }
+    );
 
     this.grantTablePermissions(getLinkLambda, devlinksTable);
-    
+
     const linkResource = api.root.addResource("link");
     this.addCorsToResource(linkResource);
-    this.addLinkResourceMethods(linkResource, createLinkLambda, getLinkLambda, userPool, api);
+    this.addLinkResourceMethods(
+      linkResource,
+      createLinkLambda,
+      getLinkLambda,
+      userPool,
+      api
+    );
 
-    const privateGetLinkLambda = this.createLambdaFunction("PrivateGetLinkFunction", "./lambdas/links/privateGetLink.ts", {
-      DYNAMO_TABLE_NAME: devlinksTable.tableName,
-    });
-    
+    const privateGetLinkLambda = this.createLambdaFunction(
+      "PrivateGetLinkFunction",
+      "./lambdas/links/privateGetLink.ts",
+      {
+        DYNAMO_TABLE_NAME: devlinksTable.tableName,
+        S3_BUCKET_NAME: s3Bucket.bucketName,
+      }
+    );
+
+    s3Bucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject"],
+        resources: [s3Bucket.arnForObjects("*")], // Allows access to all objects in the bucket
+        principals: [
+          new iam.ArnPrincipal(privateGetLinkLambda.role!.roleArn),
+          new iam.ArnPrincipal(getLinkLambda.role!.roleArn),
+        ], // Allow the Lambda execution role
+      })
+    );
+
+    s3Bucket.grantRead(privateGetLinkLambda);
+
     this.grantTablePermissions(privateGetLinkLambda, devlinksTable);
-    
+
     const privateGetLinkResource = api.root.addResource("privateLink");
     this.addCorsToResource(privateGetLinkResource);
-    privateGetLinkResource.addMethod("GET", new apigateway.LambdaIntegration(privateGetLinkLambda), {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, "PrivateCognitoAuthorizer", {
-        cognitoUserPools: [userPool],
-      }),
-      methodResponses: [
-        {
-          statusCode: "401",
-          responseModels: {
-            "application/json": new apigateway.Model(this, "ErrorResponseModel401", { // Unique name
-              restApi: api,
-              contentType: "application/json",
-              schema: {
-                type: apigateway.JsonSchemaType.OBJECT,
-                properties: {
-                  message: { type: apigateway.JsonSchemaType.STRING },
-                },
-                required: ["message"],
-              },
-            }),
+    privateGetLinkResource.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(privateGetLinkLambda),
+      {
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: new apigateway.CognitoUserPoolsAuthorizer(
+          this,
+          "PrivateCognitoAuthorizer",
+          {
+            cognitoUserPools: [userPool],
+          }
+        ),
+        methodResponses: [
+          {
+            statusCode: "401",
+            responseModels: {
+              "application/json": new apigateway.Model(
+                this,
+                "ErrorResponseModel401",
+                {
+                  // Unique name
+                  restApi: api,
+                  contentType: "application/json",
+                  schema: {
+                    type: apigateway.JsonSchemaType.OBJECT,
+                    properties: {
+                      message: { type: apigateway.JsonSchemaType.STRING },
+                    },
+                    required: ["message"],
+                  },
+                }
+              ),
+            },
+            responseParameters: {
+              "method.response.header.Content-Type": true,
+            },
           },
-          responseParameters: {
-            "method.response.header.Content-Type": true,
+          {
+            statusCode: "403",
+            responseModels: {
+              "application/json": new apigateway.Model(
+                this,
+                "ErrorResponseModel403",
+                {
+                  // Unique name
+                  restApi: api,
+                  contentType: "application/json",
+                  schema: {
+                    type: apigateway.JsonSchemaType.OBJECT,
+                    properties: {
+                      message: { type: apigateway.JsonSchemaType.STRING },
+                    },
+                    required: ["message"],
+                  },
+                }
+              ),
+            },
+            responseParameters: {
+              "method.response.header.Content-Type": true,
+            },
           },
-        },
-        {
-          statusCode: "403",
-          responseModels: {
-            "application/json": new apigateway.Model(this, "ErrorResponseModel403", { // Unique name
-              restApi: api,
-              contentType: "application/json",
-              schema: {
-                type: apigateway.JsonSchemaType.OBJECT,
-                properties: {
-                  message: { type: apigateway.JsonSchemaType.STRING },
-                },
-                required: ["message"],
-              },
-            }),
-          },
-          responseParameters: {
-            "method.response.header.Content-Type": true,
-          },
-        },
-      ],
-    });
-    
+        ],
+      }
+    );
 
     // Custom domain mapping
     new apigateway.BasePathMapping(this, "BasePathMapping", {
@@ -142,7 +223,10 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private createCertificate(domainName: string, hostedZone: route53.IHostedZone) {
+  private createCertificate(
+    domainName: string,
+    hostedZone: route53.IHostedZone
+  ) {
     return new certificates.Certificate(this, "AppCertificate", {
       domainName,
       subjectAlternativeNames: [`*.${domainName}`], // Wildcard SAN
@@ -150,17 +234,25 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private createApiGatewayDomain(domainName: string, certificate: certificates.ICertificate) {
+  private createApiGatewayDomain(
+    domainName: string,
+    certificate: certificates.ICertificate
+  ) {
     return new apigateway.DomainName(this, "CustomDomain", {
       domainName: `backend.${domainName}`,
       certificate,
     });
   }
 
-  private createApiGatewayAliasRecord(customDomain: apigateway.IDomainName, hostedZone: route53.IHostedZone) {
+  private createApiGatewayAliasRecord(
+    customDomain: apigateway.IDomainName,
+    hostedZone: route53.IHostedZone
+  ) {
     new route53.ARecord(this, "ApiAliasRecord", {
       recordName: "backend",
-      target: route53.RecordTarget.fromAlias(new route53Targets.ApiGatewayDomain(customDomain)),
+      target: route53.RecordTarget.fromAlias(
+        new route53Targets.ApiGatewayDomain(customDomain)
+      ),
       zone: hostedZone,
       ttl: cdk.Duration.minutes(1), // TTL for the DNS record
     });
@@ -194,7 +286,12 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private createLambdaFunction(functionName: string, entry: string, environment: { [key: string]: string }) {
+  private createLambdaFunction(
+    functionName: string,
+    entry: string,
+    environment: { [key: string]: string },
+    nodeModules: string[] = []
+  ) {
     return new lambdaNodejs.NodejsFunction(this, functionName, {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry,
@@ -205,6 +302,7 @@ export class CdkApiGatewayStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: false,
+        nodeModules
       },
       environment,
       tracing: lambda.Tracing.ACTIVE,
@@ -212,7 +310,11 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private grantCognitoPermissions(lambdaFunction: lambda.IFunction, userPool: cognito.IUserPool, additionalActions: string[] = []) {
+  private grantCognitoPermissions(
+    lambdaFunction: lambda.IFunction,
+    userPool: cognito.IUserPool,
+    additionalActions: string[] = []
+  ) {
     const actions = [
       "cognito-idp:AdminCreateUser",
       "cognito-idp:AdminSetUserPassword",
@@ -243,7 +345,11 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private createRequestModel(api: apigateway.IRestApi, modelName: string, properties: { [key: string]: any }) {
+  private createRequestModel(
+    api: apigateway.IRestApi,
+    modelName: string,
+    properties: { [key: string]: any }
+  ) {
     return new apigateway.Model(this, modelName, {
       modelName,
       restApi: api,
@@ -257,22 +363,35 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private createApiMethods(api: apigateway.IRestApi, registerLambda: lambda.IFunction, loginLambda: lambda.IFunction, 
-                            requestValidator: apigateway.IRequestValidator, registerRequestModel: apigateway.IModel, 
-                            loginRequestModel: apigateway.IModel) {
+  private createApiMethods(
+    api: apigateway.IRestApi,
+    registerLambda: lambda.IFunction,
+    loginLambda: lambda.IFunction,
+    requestValidator: apigateway.IRequestValidator,
+    registerRequestModel: apigateway.IModel,
+    loginRequestModel: apigateway.IModel
+  ) {
     const loginResource = api.root.addResource("login");
     this.addCorsToResource(loginResource);
-    loginResource.addMethod("POST", new apigateway.LambdaIntegration(loginLambda), {
-      requestValidator,
-      requestModels: { "application/json": loginRequestModel },
-    });
+    loginResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(loginLambda),
+      {
+        requestValidator,
+        requestModels: { "application/json": loginRequestModel },
+      }
+    );
 
     const registerResource = api.root.addResource("register");
     this.addCorsToResource(registerResource);
-    registerResource.addMethod("POST", new apigateway.LambdaIntegration(registerLambda), {
-      requestValidator,
-      requestModels: { "application/json": registerRequestModel },
-    });
+    registerResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(registerLambda),
+      {
+        requestValidator,
+        requestModels: { "application/json": registerRequestModel },
+      }
+    );
   }
 
   private addCorsToResource(resource: apigateway.IResource) {
@@ -287,17 +406,16 @@ export class CdkApiGatewayStack extends cdk.Stack {
       partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING }, // Primary partition key
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-  
+
     // Create GSI for querying by `id`
     table.addGlobalSecondaryIndex({
-      indexName: 'IdIndex',
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING }, // GSI partition key
+      indexName: "IdIndex",
+      partitionKey: { name: "id", type: dynamodb.AttributeType.STRING }, // GSI partition key
       projectionType: dynamodb.ProjectionType.ALL, // Include all attributes in the index
     });
-  
+
     return table;
   }
-  
 
   private createS3Bucket() {
     return new s3.Bucket(this, "DevLinksBucket", {
@@ -307,68 +425,101 @@ export class CdkApiGatewayStack extends cdk.Stack {
     });
   }
 
-  private grantTableAndBucketPermissions(lambdaFunction: lambda.IFunction, table: dynamodb.ITable, bucket: s3.IBucket) {
+  private grantTableAndBucketPermissions(
+    lambdaFunction: lambda.IFunction,
+    table: dynamodb.ITable,
+    bucket: s3.IBucket
+  ) {
     table.grantReadWriteData(lambdaFunction);
     bucket.grantReadWrite(lambdaFunction);
   }
 
-  private grantTablePermissions(lambdaFunction: lambda.IFunction, table: dynamodb.ITable) {
+  private grantTablePermissions(
+    lambdaFunction: lambda.IFunction,
+    table: dynamodb.ITable
+  ) {
     table.grantReadData(lambdaFunction);
   }
 
-  private addLinkResourceMethods(resource: apigateway.IResource, createLinkLambda: lambda.IFunction, getLinkLambda: lambda.IFunction, userPool: cognito.IUserPool, api: cdk.aws_apigateway.RestApi) {
-    resource.addMethod("POST", new apigateway.LambdaIntegration(createLinkLambda), {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: new apigateway.CognitoUserPoolsAuthorizer(this, "CognitoAuthorizer", {
-        cognitoUserPools: [userPool],
-      }),
-    });
+  private addLinkResourceMethods(
+    resource: apigateway.IResource,
+    createLinkLambda: lambda.IFunction,
+    getLinkLambda: lambda.IFunction,
+    userPool: cognito.IUserPool,
+    api: cdk.aws_apigateway.RestApi
+  ) {
+    resource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(createLinkLambda),
+      {
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: new apigateway.CognitoUserPoolsAuthorizer(
+          this,
+          "CognitoAuthorizer",
+          {
+            cognitoUserPools: [userPool],
+          }
+        ),
+      }
+    );
 
     resource.addMethod("GET", new apigateway.LambdaIntegration(getLinkLambda), {
       requestParameters: {
-        'method.request.querystring.id': true,
+        "method.request.querystring.id": true,
       },
-      requestValidator: new apigateway.RequestValidator(this, "GetLinkRequestValidator", {
-        restApi: api,
-        validateRequestParameters: true,
-      }),
+      requestValidator: new apigateway.RequestValidator(
+        this,
+        "GetLinkRequestValidator",
+        {
+          restApi: api,
+          validateRequestParameters: true,
+        }
+      ),
       methodResponses: [
         {
           statusCode: "200",
           responseModels: {
-            "application/json": apigateway.Model.EMPTY_MODEL,  // Replace EmptyModel with Model.EMPTY_MODEL
+            "application/json": apigateway.Model.EMPTY_MODEL, // Replace EmptyModel with Model.EMPTY_MODEL
           },
         },
         {
           statusCode: "400",
           responseModels: {
-            "application/json": new apigateway.Model(this, "ErrorResponseModel400", {
-              restApi: api,
-              contentType: "application/json",
-              schema: {
-                type: apigateway.JsonSchemaType.OBJECT,
-                properties: {
-                  message: { type: apigateway.JsonSchemaType.STRING },
+            "application/json": new apigateway.Model(
+              this,
+              "ErrorResponseModel400",
+              {
+                restApi: api,
+                contentType: "application/json",
+                schema: {
+                  type: apigateway.JsonSchemaType.OBJECT,
+                  properties: {
+                    message: { type: apigateway.JsonSchemaType.STRING },
+                  },
+                  required: ["message"],
                 },
-                required: ["message"],
-              },
-            }),
+              }
+            ),
           },
         },
         {
           statusCode: "404",
           responseModels: {
-            "application/json": new apigateway.Model(this, "ErrorResponseModel404", {
-              restApi: api,
-              contentType: "application/json",
-              schema: {
-                type: apigateway.JsonSchemaType.OBJECT,
-                properties: {
-                  message: { type: apigateway.JsonSchemaType.STRING },
+            "application/json": new apigateway.Model(
+              this,
+              "ErrorResponseModel404",
+              {
+                restApi: api,
+                contentType: "application/json",
+                schema: {
+                  type: apigateway.JsonSchemaType.OBJECT,
+                  properties: {
+                    message: { type: apigateway.JsonSchemaType.STRING },
+                  },
+                  required: ["message"],
                 },
-                required: ["message"],
-              },
-            }),
+              }
+            ),
           },
         },
       ],

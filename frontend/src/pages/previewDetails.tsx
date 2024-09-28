@@ -12,6 +12,7 @@ import ProfileNotFound from "../components/profileNotFound";
 
 const PreviewDetailsPage = () => {
   const { id } = useParams();
+  console.log("🚀 ~ PreviewDetailsPage ~ id:", id)
   const navigate = useNavigate();
   const [linkData, setLinkData] = useState<LinksState>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -22,11 +23,13 @@ const PreviewDetailsPage = () => {
       setLoading(true);
       try {
         const linkData = await LinkService.getLinkById(id);
+        console.log("🚀 ~ fetchLink ~ linkData:", linkData)
         setLinkData(linkData);
         if (!linkData) {
           setDataNotFound(true);
         }
       } catch (error) {
+        setDataNotFound(true);
         console.error("Error fetching link:", error);
       } finally {
         setLoading(false);
