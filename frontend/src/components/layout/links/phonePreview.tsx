@@ -5,6 +5,7 @@ import { platforms } from "../../../utils/const/plataforms";
 import { useLinks } from "../../context/link";
 import { useWatch } from "react-hook-form";
 import _ from "lodash";
+import { motion } from "framer-motion";
 
 export default function PhonePreview() {
   const { control, fields, move, avatar } = useLinks();
@@ -52,32 +53,44 @@ export default function PhonePreview() {
             width="95px" // Set width to match height for a perfect circle
             height="95px" // Ensure height is fixed to 200px
           >
-            <img
-              src={avatar}
-              alt={"Profile photo"}
-              loading="lazy"
-              style={{
-                height: "100%", // Make image fill the height of the container
-                width: "100%", // Make image fill the width of the container
-                objectFit: "cover", // Ensure the image fills the box without stretching
-                borderRadius: "50%", // Make it a perfect circle
-              }}
-            />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <img
+                src={avatar}
+                alt={"Profile photo"}
+                loading="lazy"
+                style={{
+                  height: "100%", // Make image fill the height of the container
+                  width: "100%", // Make image fill the width of the container
+                  objectFit: "cover", // Ensure the image fills the box without stretching
+                  borderRadius: "50%", // Make it a perfect circle
+                }}
+              />
+            </motion.div>
           </Box>
         )}
         {firstName || lastName ? (
-          <Box
-            position={"absolute"}
-            top={"179px"}
-            fontSize={"1.125rem"}
-            fontWeight={"600"}
-            textAlign={"center"}
-            width={"80%"}
-            left={"33px"}
-            style={{ background: "white" }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            {firstName} {lastName}
-          </Box>
+            <Box
+              position={"absolute"}
+              top={"179px"}
+              fontSize={"1.125rem"}
+              fontWeight={"600"}
+              textAlign={"center"}
+              width={"80%"}
+              left={"33px"}
+              style={{ background: "white" }}
+            >
+              {firstName} {lastName}
+            </Box>
+          </motion.div>
         ) : null}
         {email ? (
           <Box
@@ -126,24 +139,31 @@ export default function PhonePreview() {
                                 snapshot.isDragging,
                                 provided.draggableProps.style
                               ),
-                              backgroundColor: platform?.color,
-                            }}
-                            sx={{
-                              width: "235px",
-                              height: "43px",
-                              padding: "10px",
-                              display: "flex",
-                              alignItems: "center",
-                              color: "white",
-                              borderRadius: "7px",
-                              marginBottom: "21px",
-                              backgroundColor: platform?.color,
                             }}
                           >
-                            {platform && <platform.icon color={"white"} />}
-                            <Box marginLeft={"5px"}>{platform?.name}</Box>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ duration: 0.5 }}
+                            >
+                              <Box
+                                sx={{
+                                  width: "235px",
+                                  height: "43px",
+                                  padding: "10px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  color: "white",
+                                  borderRadius: "7px",
+                                  marginBottom: "21px",
+                                  backgroundColor: platform?.color,
+                                }}
+                              >
+                                {platform && <platform.icon color={"white"} />}
+                                <Box marginLeft={"5px"}>{platform?.name}</Box>
+                              </Box>
+                            </motion.div>
                           </Box>
-                        
                         )}
                       </Draggable>
                     );

@@ -21,6 +21,7 @@
     "@reduxjs/toolkit": "^2.2.7",
     "@types/react-redux": "^7.1.33",
     "axios": "^1.7.7",
+    "framer-motion": "^11.9.0",
     "lodash": "^4.17.21",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",

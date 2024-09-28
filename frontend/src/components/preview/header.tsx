@@ -14,8 +14,8 @@ export default function PreviewHeader() {
     const id = getValues("id") || [];
     
     const copyGoogleUrlToClipboard = () => {
-      const host = window.location.host;
-      const linkUrl = `https://${host}/${id}`;
+      const url = window.location;
+      const linkUrl = `${url.protocol}//${url.host}/${id}`;
       navigator.clipboard.writeText(linkUrl).then(() => {
         dispatch(
           addMessage({

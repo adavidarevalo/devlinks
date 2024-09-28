@@ -1,13 +1,17 @@
-// NotFound.js
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const NotFound = () => {
-
-  const handleGoHome = () => {
-  };
+  const navigate = useNavigate()
 
   return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
     <Box
       display="flex"
       flexDirection="column"
@@ -24,10 +28,11 @@ const NotFound = () => {
       <Typography variant="h6">
         Oops! The page you are looking for does not exist.
       </Typography>
-      <Button variant="contained" color="primary" onClick={handleGoHome} style={{ marginTop: 20 }}>
+      <Button variant="contained" color="primary" onClick={() => navigate("/")} style={{ marginTop: 20 }}>
         Go to Home
       </Button>
     </Box>
+    </motion.div>
   );
 };
 

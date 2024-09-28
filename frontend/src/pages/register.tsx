@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Container, Typography } from "@mui/material";
 import DevlinksLogoLg from "../assets/DevlinksLogoLg";
+import { motion } from 'framer-motion';
 import RegisterForm from "../components/register/form";
 import { useNavigate } from "react-router-dom";
 import useAuthRedirect from "../hook/useAuthRedirect";
@@ -20,6 +21,11 @@ export default function RegisterPage() {
         bgcolor: "#F7F7F7",
       }}
     >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
       <Box
         sx={{
           display: "flex",
@@ -67,6 +73,7 @@ export default function RegisterPage() {
           <RegisterForm />
         </Box>
       </Box>
+      </motion.div>
     </Container>
   );
 }
