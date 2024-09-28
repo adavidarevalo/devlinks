@@ -1,7 +1,6 @@
 import Axios, { CancelTokenSource, AxiosStatic, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { config } from '../config';
 import { deleteStorage, getStorage } from '../localstorage';
-import _ from 'lodash';
 
 export interface AxiosRequestConfigWithExtra extends AxiosRequestConfig {
     extra?: {
@@ -64,21 +63,29 @@ class HttpService implements IHttpInstance {
                 return response; // Pass the response back
             },
             (error) => {
-                // Handle response errors here
 
-                const status = _.get(error, "response.status")
+                if (error.response) {
+                    const status = error.response.status;
 
-                if (status === 401 || status === 403) {
-                    deleteStorage("IdToken")
-                    deleteStorage("RefreshToken")
-                    deleteStorage("AccessToken")
+                    if (status === 401 || status === 403) {
+                        console.log(`Response with status ${status} received. Redirecting to login.`);
+                        deleteStorage("IdToken");
+                        deleteStorage("RefreshToken");
+                        deleteStorage("AccessToken");
 
-                    window.location.href = "/login"
+                        window.location.href = "/login";
+                    }
+                } else if (error.request) {
+                    console.log("Network error: No response received from the server.");
+                } else {
+                    console.log("Error setting up the request:", error.message);
                 }
 
                 return Promise.reject(error);
             }
         );
+
+     
 
         return { source, http };
     }

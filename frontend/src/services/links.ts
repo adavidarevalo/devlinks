@@ -19,6 +19,10 @@ class LinkService {
 
     return link.data;
   }
+  async getLinkById(id: string) {
+    const link = await this.APIv1.http.get(`link?id=${id}`);
+    return link.data;
+  }
 }
 
 export default new LinkService();

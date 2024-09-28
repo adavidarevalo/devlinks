@@ -1,43 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box, Typography } from "@mui/material";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store";
-import { addMessage } from "../../store/slices/globalSlice";
 import FormInput from "../form/input";
 import { useLinks } from "../context/link";
 import Footer from "../link/footer";
-import LinkService from "../../services/links"
 import ProfilePictureUploader from "./profilePictureUploader";
 
 const ProfileDetails = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const [loading, setLoading] = useState(false);
-
-  const { control, errors, handleSubmit } = useLinks();
-
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      await LinkService.createLink(data);
-      // Simulate API call
-      dispatch(
-        addMessage({
-          type: "success",
-          message: "Profile updated successfully.",
-        })
-      );
-    } catch (error) {
-      console.error(error);
-      dispatch(
-        addMessage({
-          type: "error",
-          message: "Error updating profile.",
-        })
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { linkLoading, control, errors, handleSubmit, onLinkSubmit } = useLinks();
 
   return (
     <Box
@@ -72,7 +41,7 @@ const ProfileDetails = () => {
       <ProfilePictureUploader/>
 
       {/* Form starts here */}
-      <Box onSubmit={handleSubmit?.(onSubmit)} component="form" noValidate>
+      <Box onSubmit={handleSubmit?.(onLinkSubmit)} component="form" noValidate>
         <Box
           style={{ background: "#f9f9f9" }}
           padding={"10px 20px"}
@@ -85,7 +54,7 @@ const ProfileDetails = () => {
             errors={errors}
             label={"First name"} // {{ edit_3 }}
             placeholder="e.g. John"
-            disabled={loading} // {{ edit_4 }}
+            disabled={linkLoading} // {{ edit_4 }}
           />
 
           <FormInput
@@ -94,7 +63,7 @@ const ProfileDetails = () => {
             errors={errors}
             label={"Last name"}
             placeholder="e.g. Appleseed"
-            disabled={loading} // {{ edit_5 }}
+            disabled={linkLoading} // {{ edit_5 }}
           />
 
           <FormInput
@@ -102,10 +71,10 @@ const ProfileDetails = () => {
             control={control}
             errors={errors}
             label={"Email address"}
-            disabled={loading} // {{ edit_6 }}
+            disabled={linkLoading} // {{ edit_6 }}
           />
         </Box>
-        <Footer loading={loading}/>
+        <Footer loading={linkLoading}/>
       </Box>
     </Box>
   );

@@ -2,12 +2,30 @@ import { Box, Button } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useNavigate } from 'react-router-dom';
 import { useLinks } from '../context/link';
+import { AppDispatch } from '../../store';
+import { useDispatch } from 'react-redux';
+import { addMessage } from '../../store/slices/globalSlice';
 
 export default function PreviewHeader() {
     const navigate = useNavigate()
     const { getValues } = useLinks();
+    const dispatch = useDispatch<AppDispatch>();
 
-    const links = getValues("links") || []
+    const id = getValues("id") || [];
+    
+    const copyGoogleUrlToClipboard = () => {
+      const host = window.location.host;
+      const linkUrl = `https://${host}/${id}`;
+      navigator.clipboard.writeText(linkUrl).then(() => {
+        dispatch(
+          addMessage({
+            type: "info",
+            message: "Link copied to clipboard!"
+          })
+        );
+
+      })
+    };
 
   return (
     <Box
@@ -55,7 +73,7 @@ export default function PreviewHeader() {
               textTransform: 'none',
               fontSize: '16px',
             }}
-            disabled={links.length === 0}
+            onClick={copyGoogleUrlToClipboard}
           >
             Share Link
           </Button>

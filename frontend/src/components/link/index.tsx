@@ -5,53 +5,23 @@ import Card from "./card";
 import Footer from "./footer";
 import GetStartedComponent from "./getStarted";
 import { useLinks } from "../context/link";
-import { useRef, useState } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store";
-import { addMessage } from "../../store/slices/globalSlice";
-import LinkService from "./../../services/links"
+import { useRef } from "react";
 
 export type FormValues = {
   links: { platform: string; link: string }[];
 };
 
 const LinkForm = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:600px)");
-  const { fields, move, append, handleSubmit } = useLinks();
-
+  const { linkLoading, fields, move, append, handleSubmit, onLinkSubmit } = useLinks();
+  
   const containerRef = useRef(null);
-
 
   const addLink = () => {
     append({ platform: "Github", link: "" }, { shouldFocus: false });
   };
 
-  // Handle form submission
-  const onSubmit = async (data: FormValues) => {
-    setLoading(true);
-    try {
-      await LinkService.createLink(data);
-      dispatch(
-        addMessage({
-          type: "success",
-          message: "Link created successfully.",
-        })
-      );
-    } catch (error) {
-      console.error(error);
-      dispatch(
-        addMessage({
-          type: "error",
-          message: "Error creating link.",
-        })
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle drag and drop
   const onDragEnd = (result: any) => {
@@ -63,7 +33,7 @@ const LinkForm = () => {
     <Button
       variant="outlined"
       onClick={addLink}
-      disabled={fields.length >= 5 || loading}
+      disabled={fields.length >= 5 || linkLoading}
       style={{
         marginBlock: "13px 20px",
         fontSize: "13px",
@@ -97,7 +67,7 @@ const LinkForm = () => {
   );
 
   return (
-    <form onSubmit={handleSubmit?.(onSubmit)} style={{ 
+    <form onSubmit={handleSubmit?.(onLinkSubmit)} style={{ 
       display: "flex",
       flexDirection: "column",
       flex: 1,
@@ -130,7 +100,7 @@ const LinkForm = () => {
         </Box>
 
         {/* Fixed Footer */}
-        {fields.length !== 0 && <Footer loading={loading}/>}
+        {fields.length !== 0 && <Footer loading={linkLoading}/>}
       </Box>
     </form>
   );

@@ -10,21 +10,28 @@ const dynamodb = new AWS.DynamoDB.DocumentClient();
 export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
   try {
     const queryStringParameters = event.queryStringParameters || {};
-    const userId = queryStringParameters?.userId || '';
-    const id = queryStringParameters?.id || '';
+    const id = queryStringParameters?.id;
 
-    // Determine the key to use for DynamoDB query
-    const key = userId ? { userId } : { id };
+    if (!id) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ message: 'ID is required' }),
+      };
+    }
 
-    // Get the item from DynamoDB
-    const result = await dynamodb
-      .get({
+
+      const result = await dynamodb
+      .query({
         TableName: process.env.DYNAMO_TABLE_NAME!,
-        Key: key,
+        IndexName: 'IdIndex', // GSI for querying by id
+        KeyConditionExpression: 'id = :id',
+        ExpressionAttributeValues: {
+          ':id': id,
+        },
       })
       .promise();
 
-    if (!result.Item) {
+    if (!result.Items) {
       return {
         statusCode: 404,
         body: JSON.stringify({ message: 'Item not found' }),
@@ -33,7 +40,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
     return {
       statusCode: 200,
-      body: JSON.stringify(result.Item),
+      body: JSON.stringify(result.Items[0]),
     };
   } catch (error: any) {
     console.error(error);

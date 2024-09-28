@@ -37,6 +37,7 @@ export interface LinksState {
     contentType: string;
   } | string;
   links: Link[]; // This should remain required
+  id?: string
 }
 
 const initialState: LinksState = {
@@ -45,6 +46,7 @@ const initialState: LinksState = {
   email: "",
   avatar: undefined,
   links: [],
+  id: null
 };
 
 const LinksContext = createContext<{
@@ -61,6 +63,8 @@ const LinksContext = createContext<{
   getValues: UseFormGetValues<LinksState>,
   setAvatar: React.Dispatch<React.SetStateAction<string>>
   avatar: string
+  onLinkSubmit: (data: LinksState) => Promise<void>
+  linkLoading: boolean
 }>({
   control: null,
   errors: {},
@@ -74,7 +78,9 @@ const LinksContext = createContext<{
   setValue: null,
   getValues: null,
   setAvatar: null,
-  avatar: null
+  avatar: null,
+  onLinkSubmit: async () => {},
+  linkLoading: false
 });
 
 
@@ -82,6 +88,7 @@ export const LinksProvider = () => {
   const [view, setView] = useState<"links" | "profile">("links");
   const [avatar, setAvatar] = useState<string>(null)
   const [loading, setLoading] = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
   const dispatch = useDispatch<AppDispatch>();
 
   const {
@@ -142,6 +149,31 @@ export const LinksProvider = () => {
     name: "links",
   });
 
+  const onLinkSubmit = async (data: LinksState) => {
+    setLinkLoading(true);
+    try {
+      const result = await LinkService.createLink(data);
+      setValue("id", _.get(result, "item.id"))
+      dispatch(
+        addMessage({
+          type: "success",
+          message: "Link created successfully.",
+        })
+      );
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          type: "error",
+          message: "Error creating link.",
+        })
+      );
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+
   return (
     <LinksContext.Provider
       value={{
@@ -157,7 +189,9 @@ export const LinksProvider = () => {
         setValue,
         getValues,
         setAvatar,
-        avatar
+        avatar,
+        linkLoading,
+        onLinkSubmit
       }}
     >
       {loading ? <LoadingView/> : <Outlet />}

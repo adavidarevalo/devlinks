@@ -13,17 +13,17 @@ export const handler = async (
   try {
     const userId = _.get(event, "requestContext.authorizer.claims.sub");
 
-    const key = { userId }; // Changed to always use userId
-
-    // Get the item from DynamoDB
     const result = await dynamodb
-      .get({
-        TableName: process.env.DYNAMO_TABLE_NAME!,
-        Key: key,
-      })
-      .promise();
+    .query({
+      TableName: process.env.DYNAMO_TABLE_NAME!,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+      },
+    })
+    .promise();
 
-    if (!result.Item) {
+    if (!result.Items) {
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -38,7 +38,7 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      body: JSON.stringify(result.Item),
+      body: JSON.stringify(result.Items[0]),
     };
   } catch (error: any) {
     console.error(error);

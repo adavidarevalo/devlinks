@@ -2,6 +2,7 @@ import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import DevlinksLogoLg from '../assets/DevlinksLogoLg';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import useAuthRedirect from '../hook/useAuthRedirect';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function HomePage() {
     };
   }, []);
 
+  useAuthRedirect()
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} sx={{ minHeight: '100vh' }}>

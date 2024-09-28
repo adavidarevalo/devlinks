@@ -19,7 +19,7 @@ export default function MainRoutes() {
           <Route path="/links" element={<LinksPage />} />
           <Route path={"/preview"} element={<PreviewCardPage />} />
         </Route>
-        <Route path="/links/:id" element={<PreviewDetailsPage />} />
+        <Route path="/:id" element={<PreviewDetailsPage />} />
         <Route path="/*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
